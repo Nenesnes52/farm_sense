@@ -4,7 +4,6 @@ import 'package:farm_sense/models/farm_sense_model.dart';
 import 'package:farm_sense/provider.dart';
 import 'package:farm_sense/routes/route_name.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get_it_mixin/get_it_mixin.dart';
 
 class Splash extends StatefulWidget with GetItStatefulWidgetMixin {
@@ -51,8 +50,8 @@ class _SplashState extends State<Splash> with GetItStateMixin {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: Center(
-          child: SvgPicture.asset(
-            'assets/zona_farm_logo_text.svg',
+          child: Image.asset(
+            'assets/logo_text.png',
             // color: Colors.white,
             // scale: 112.68 / 70,
           ),
