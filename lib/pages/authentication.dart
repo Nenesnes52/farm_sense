@@ -3,6 +3,7 @@ import 'package:farm_sense/pages/main_menu.dart';
 import 'package:farm_sense/provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get_it_mixin/get_it_mixin.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -64,7 +65,9 @@ class AuthenticationState extends State<Authentication> with GetItStateMixin {
                   SizedBox(
                     height: MediaQuery.of(context).size.height * 0.1,
                   ),
-                  Image.asset('assets/farm_sense_logo_text.png'),
+                  SvgPicture.asset(
+                    'assets/zona_farm_logo_text.svg',
+                  ),
                   SizedBox(
                     height: MediaQuery.of(context).size.height * 0.1,
                   ),
@@ -530,27 +533,27 @@ class AuthenticationState extends State<Authentication> with GetItStateMixin {
                                       print(usernameController.text);
                                       print(passwordController.text);
                                     }
-                                    // model.handleSignUp(
-                                    //   name: nameController.text.trim(),
-                                    //   email: emailController.text.trim(),
-                                    //   username: usernameController.text.trim(),
-                                    //   password: passwordController.text.trim(),
-                                    //   onSuccess: () {
-                                    //     final snackBar = SnackBar(
-                                    //       content: Text(
-                                    //           'Akun dengan username ${usernameController.text.trim()} berhasil dibuat'),
-                                    //     );
-                                    //     ScaffoldMessenger.of(context)
-                                    //         .showSnackBar(snackBar);
-                                    //     Navigator.of(context).pushReplacement(
-                                    //       MaterialPageRoute(
-                                    //         builder: (context) =>
-                                    //             const MainMenu(),
-                                    //       ),
-                                    //     );
-                                    //   },
-                                    //   onFailed: () {},
-                                    // );
+                                    model.handleSignUp(
+                                      name: nameController.text.trim(),
+                                      email: emailController.text.trim(),
+                                      username: usernameController.text.trim(),
+                                      password: passwordController.text.trim(),
+                                      onSuccess: () {
+                                        final snackBar = SnackBar(
+                                          content: Text(
+                                              'Akun dengan username ${usernameController.text.trim()} berhasil dibuat'),
+                                        );
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(snackBar);
+                                        Navigator.of(context).pushReplacement(
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                const MainMenu(),
+                                          ),
+                                        );
+                                      },
+                                      onFailed: () {},
+                                    );
                                   },
                                   style: IconButton.styleFrom(
                                     splashFactory: NoSplash.splashFactory,
