@@ -144,7 +144,7 @@ class MainMenuState extends State<MainMenu> {
                   (x) {
                     final pixel = resizedImage.getPixel(x, y);
                     return [
-                      pixel.r / 255.0, // Akses komponen merah (sudah dikoreksi)
+                      pixel.r / 255.0, // Akses komponen merah
                       pixel.g / 255.0, // Akses komponen hijau
                       pixel.b / 255.0 // Akses komponen biru
                     ];
@@ -299,7 +299,6 @@ class MainMenuState extends State<MainMenu> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              // ... (Widget Riwayat Terakhir Anda tidak berubah) ...
                               Container(
                                 decoration: BoxDecoration(
                                   color: Colors.white,
@@ -316,8 +315,7 @@ class MainMenuState extends State<MainMenu> {
                                       ),
                                     ),
                                     SizedBox(height: 20),
-                                    Text('4 Juni 2025'),
-                                    Text('Terdeteksi Salmonella'),
+                                    Text('Belum ada riwayat'),
                                   ],
                                 ),
                               ),
