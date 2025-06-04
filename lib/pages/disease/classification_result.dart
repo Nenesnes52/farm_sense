@@ -298,15 +298,19 @@ class ClassificationResult extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   if (processedImageFile != null)
-                    Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: Image.file(
-                        processedImageFile!,
-                        fit: BoxFit.cover,
+                    Center(
+                      child: Expanded(
+                        child: Card(
+                          elevation: 2,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: Image.file(
+                            processedImageFile!,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
                       ),
                     ),
                   const SizedBox(height: 16),
@@ -380,8 +384,7 @@ class ClassificationResult extends StatelessWidget {
                               .map((result) => _buildResultRow(
                                   result['label'] as String,
                                   result['value'] as double,
-                                  context))
-                              .toList(),
+                                  context)),
                         ],
                       ),
                     ),
@@ -409,7 +412,7 @@ class ClassificationResult extends StatelessWidget {
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withOpacity(0.3),
+                  color: Colors.grey.withValues(alpha: 0.3),
                   spreadRadius: 1,
                   blurRadius: 3,
                   offset: const Offset(0, -1),
