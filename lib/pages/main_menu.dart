@@ -1,5 +1,5 @@
-// ignore_for_file: deprecated_member_use
-
+import 'package:camera/camera.dart';
+import 'package:farm_sense/chicken_disease_detector.dart';
 import 'package:flutter/material.dart';
 
 class MainMenu extends StatefulWidget {
@@ -14,26 +14,12 @@ class MainMenu extends StatefulWidget {
 }
 
 class MainMenuState extends State<MainMenu> {
-  final List<Widget> _pages = [
-    // Home(),
-    // Farm(),
-    // Control(),
-    Center(
-      child: Text('Coming Soon',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 25)),
-    ),
-    Center(
-      child: Text('Coming Soon',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 25)),
-    ),
-  ];
-  var _pageIndex = 0;
+  CameraDescription? firstCamera;
   DateTime? _lastBackPressed;
 
   @override
   void initState() {
     super.initState();
-    _pageIndex = widget.initPageIndex ?? 0;
   }
 
   Future<bool> _onWillPop() async {
@@ -59,25 +45,185 @@ class MainMenuState extends State<MainMenu> {
     return WillPopScope(
       onWillPop: _onWillPop,
       child: Container(
-        color: const Color.fromRGBO(246, 246, 249, 1),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            stops: [0, 0.39],
+            colors: [
+              Color.fromRGBO(2, 84, 100, 1),
+              Color.fromRGBO(91, 158, 172, 1),
+            ],
+          ),
+        ),
         child: SafeArea(
           child: Stack(
             alignment: Alignment.bottomCenter,
             children: [
               Scaffold(
                 // resizeToAvoidBottomInset: true,
-                backgroundColor: const Color.fromRGBO(246, 246, 249, 1),
-                body: _pages[_pageIndex],
-                // bottomNavigationBar: CustomBottomNavBar(
-                //   currentIndex: _pageIndex,
-                //   onTap: (value) {
-                //     setState(() {
-                //       _pageIndex = value;
-                //     });
-                //   },
-                // ),
+                backgroundColor: Colors.transparent,
+                body: Center(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Image.asset(
+                        'assets/images/logo_image.png',
+                        height: 150,
+                        width: 150,
+                      ),
+                      SizedBox(height: 10),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Color.fromRGBO(2, 77, 91, 1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                padding: EdgeInsets.all(20),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      'Riwayat Terakhir',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 32,
+                                      ),
+                                    ),
+                                    SizedBox(height: 20),
+                                    Text('4 Juni 2025'),
+                                    Text('Terdeteksi Salmonella'),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(height: 20),
+                              GestureDetector(
+                                onTap: () {},
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 20, vertical: 10),
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        'Riwayat Hasil Deteksi',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      SizedBox(height: 10),
+                                      Image.asset('assets/images/history.png')
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              SizedBox(height: 20),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: () {},
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                        ),
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 10),
+                                        child: Column(
+                                          children: [
+                                            Text(
+                                              'Unggah Gambar',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w900,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                            // SizedBox(height: 10),
+                                            Image.asset(
+                                              'assets/images/upload.png',
+                                              height: 90,
+                                              width: 90,
+                                            )
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(width: 20),
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: () async {
+                                        final cameras =
+                                            (await availableCameras())
+                                                .firstWhere((camera) =>
+                                                    camera.lensDirection ==
+                                                    CameraLensDirection.back);
+                                        final firstCamera = cameras;
+                                        if (context.mounted) {
+                                          Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  ChickenDiseaseDetector(
+                                                camera: firstCamera,
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      },
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                        ),
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 10),
+                                        child: Column(
+                                          children: [
+                                            Text(
+                                              'Ambil Gambar',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w900,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                            // SizedBox(height: 10),
+                                            Image.asset(
+                                              'assets/images/capture.png',
+                                              height: 90,
+                                              width: 90,
+                                            )
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                ],
+                              )
+                            ],
+                          ),
+                        ),
+                      )
+                    ],
+                  ),
+                ),
               ),
-              // CameraButton()
             ],
           ),
         ),

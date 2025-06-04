@@ -13,6 +13,7 @@ void main() {
       print('Semua instance yang terdaftar: ${locator.toString()}');
     }
   });
+
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,

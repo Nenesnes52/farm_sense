@@ -22,31 +22,31 @@ class FarmSenseApp extends StatelessWidget {
         textTheme: TextTheme().copyWith(
           bodySmall: TextStyle(
               color: Color.fromRGBO(2, 84, 100, 1),
-              fontFamily: GoogleFonts.inter().fontFamily),
+              fontFamily: GoogleFonts.plusJakartaSans().fontFamily),
           bodyMedium: TextStyle(
               color: Color.fromRGBO(2, 84, 100, 1),
-              fontFamily: GoogleFonts.inter().fontFamily),
+              fontFamily: GoogleFonts.plusJakartaSans().fontFamily),
           bodyLarge: TextStyle(
               color: Color.fromRGBO(2, 84, 100, 1),
-              fontFamily: GoogleFonts.inter().fontFamily),
+              fontFamily: GoogleFonts.plusJakartaSans().fontFamily),
           labelSmall: TextStyle(
               color: Color.fromRGBO(2, 84, 100, 1),
-              fontFamily: GoogleFonts.inter().fontFamily),
+              fontFamily: GoogleFonts.plusJakartaSans().fontFamily),
           labelMedium: TextStyle(
               color: Color.fromRGBO(2, 84, 100, 1),
-              fontFamily: GoogleFonts.inter().fontFamily),
+              fontFamily: GoogleFonts.plusJakartaSans().fontFamily),
           labelLarge: TextStyle(
               color: Color.fromRGBO(2, 84, 100, 1),
-              fontFamily: GoogleFonts.inter().fontFamily),
+              fontFamily: GoogleFonts.plusJakartaSans().fontFamily),
           displaySmall: TextStyle(
               color: Color.fromRGBO(2, 84, 100, 1),
-              fontFamily: GoogleFonts.inter().fontFamily),
+              fontFamily: GoogleFonts.plusJakartaSans().fontFamily),
           displayMedium: TextStyle(
               color: Color.fromRGBO(2, 84, 100, 1),
-              fontFamily: GoogleFonts.inter().fontFamily),
+              fontFamily: GoogleFonts.plusJakartaSans().fontFamily),
           displayLarge: TextStyle(
               color: Color.fromRGBO(2, 84, 100, 1),
-              fontFamily: GoogleFonts.inter().fontFamily),
+              fontFamily: GoogleFonts.plusJakartaSans().fontFamily),
         ),
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color.fromRGBO(2, 84, 100, 1),

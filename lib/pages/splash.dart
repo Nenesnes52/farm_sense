@@ -41,9 +41,10 @@ class _SplashState extends State<Splash> with GetItStateMixin {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
+          stops: [0, 0.39],
           colors: [
             Color.fromRGBO(2, 84, 100, 1),
-            Color.fromRGBO(42, 111, 125, 1),
+            Color.fromRGBO(91, 158, 172, 1),
           ],
         ),
       ),
@@ -51,7 +52,7 @@ class _SplashState extends State<Splash> with GetItStateMixin {
         backgroundColor: Colors.transparent,
         body: Center(
           child: Image.asset(
-            'assets/logo_text.png',
+            'assets/images/logo_image.png',
             // color: Colors.white,
             // scale: 112.68 / 70,
           ),
