@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:camera/camera.dart';
+import 'package:farm_sense/pages/disease/classification_result.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
@@ -22,10 +23,7 @@ class ChickenDiseaseDetector extends StatefulWidget {
 
 class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
   late Interpreter _interpreter;
-  String _result = '';
-  File?
-      _processedImageFile; // Untuk menyimpan file gambar yang akan diproses TFLite
-  bool _isProcessing = false; // Untuk loading indicator
+  bool _isProcessing = false;
   final int _inputSize = 224;
 
   late CameraController _controller;
@@ -56,9 +54,7 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
       if (kDebugMode) {
         print("Gagal memuat model: $e");
       }
-      setState(() {
-        _result = "Gagal memuat model. Pastikan file model ada di assets.";
-      });
+      setState(() {});
     }
   }
 
@@ -73,8 +69,7 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
     if (!mounted) return;
     setState(() {
       _isProcessing = true;
-      _result = 'Memproses...';
-      _processedImageFile = imageFile; // Simpan untuk ditampilkan
+// Simpan untuk ditampilkan
     });
 
     try {
@@ -82,7 +77,6 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
       final originalImage = img.decodeImage(await imageFile.readAsBytes());
       if (originalImage == null) {
         setState(() {
-          _result = 'Gagal membaca gambar.';
           _isProcessing = false;
         });
         return;
@@ -119,36 +113,57 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
       // Mendapatkan semua label
       final allLabels = _getLabels();
 
-      // Membuat daftar Map untuk menyimpan label dan nilainya agar mudah diurutkan
-      final List<Map<String, dynamic>> resultsWithLabels = [];
+      double coccidiosisPercentage = 0.0;
+      double sehatPercentage = 0.0;
+      double newcastlePercentage = 0.0;
+      double salmonellaPercentage = 0.0;
+      String topPredictionLabel = '';
+      double topPredictionValue = 0.0;
+
+      List<Map<String, dynamic>> resultsForSorting = [];
+
       for (int i = 0; i < predictionResult.length; i++) {
-        resultsWithLabels.add({
-          'label': allLabels[i], // Mengambil label dari _getLabels()
-          'value': predictionResult[i],
-        });
+        String label = allLabels[i];
+        double percentage = predictionResult[i] * 100;
+
+        resultsForSorting.add({'label': label, 'value': percentage});
+
+        if (label == "Coccidiosis") {
+          coccidiosisPercentage = percentage;
+        } else if (label == "Sehat") {
+          sehatPercentage = percentage;
+        } else if (label == "Newcastle Disease") {
+          newcastlePercentage = percentage;
+        } else if (label == "Salmonella") {
+          salmonellaPercentage = percentage;
+        }
       }
 
-      // Mengurutkan daftar berdasarkan nilai (value) dari tertinggi ke terendah
-      resultsWithLabels.sort(
+      // Mengurutkan untuk menentukan prediksi utama (opsional jika hanya butuh variabel terpisah)
+      resultsForSorting.sort(
           (a, b) => (b['value'] as double).compareTo(a['value'] as double));
-
-      // Mendapatkan label dengan prediksi tertinggi dari hasil yang sudah diurutkan
-      final topPredictionLabel = resultsWithLabels[0]['label'] as String;
-
-      // Membuat string hasil yang lebih detail dengan persentase
-      // dan detail yang sudah terurut
-      String detailedResultOutput =
-          "Prediksi Utama: $topPredictionLabel \n\nDetail:\n";
-      for (var resultItem in resultsWithLabels) {
-        detailedResultOutput +=
-            "${resultItem['label']}:\t\t${(resultItem['value'] * 100).toStringAsFixed(2)}%\n";
+      if (resultsForSorting.isNotEmpty) {
+        topPredictionLabel = resultsForSorting[0]['label'] as String;
+        topPredictionValue = resultsForSorting[0]['value'] as double;
       }
 
       if (!mounted) return;
       setState(() {
-        _result =
-            detailedResultOutput; // Menampilkan hasil detail yang sudah terurut
         _isProcessing = false;
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (context) {
+            return ClassificationResult(
+              // Teruskan variabel-variabel individual
+              coccidiosis: coccidiosisPercentage,
+              sehat: sehatPercentage,
+              newcastle: newcastlePercentage,
+              salmonella: salmonellaPercentage,
+              topLabel: topPredictionLabel, // Label prediksi tertinggi
+              topValue: topPredictionValue, // Persentase prediksi tertinggi
+              processedImageFile: imageFile,
+            );
+          },
+        ));
       });
     } catch (e) {
       if (kDebugMode) {
@@ -156,7 +171,6 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
       }
       if (!mounted) return;
       setState(() {
-        _result = 'Error saat memproses gambar: $e';
         _isProcessing = false;
       });
     }
@@ -178,8 +192,8 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
     try {
       setState(() {
         _isProcessing = true;
-        _result = ''; // Kosongkan hasil sebelumnya
-        _processedImageFile = null; // Kosongkan gambar preview hasil sebelumnya
+// Kosongkan hasil sebelumnya
+// Kosongkan gambar preview hasil sebelumnya
       });
 
       // Pastikan controller sudah terinisialisasi
@@ -231,7 +245,7 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Preview Gambar',
+                  'Pratinjau Gambar',
                   style: GoogleFonts.poppins(
                       fontSize: 18, fontWeight: FontWeight.bold),
                 ),
@@ -249,7 +263,7 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
                       onPressed: () {
                         Navigator.of(context).pop(false); // Batal
                       },
-                      child: Text('Ambil Ulang',
+                      child: Text('Kembali',
                           style: GoogleFonts.poppins(color: Colors.red)),
                     ),
                     ElevatedButton.icon(
@@ -280,8 +294,7 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
         // Jika pengguna memilih "Ambil Ulang" atau menutup dialog
         setState(() {
           _isProcessing = false;
-          _result = 'Pengambilan gambar dibatalkan.';
-          _processedImageFile = null;
+          // _result = 'Pengambilan gambar dibatalkan.';
         });
         // Hapus file crop sementara jika tidak jadi diproses
         if (await croppedFile.exists()) {
@@ -294,7 +307,6 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
       }
       if (!mounted) return;
       setState(() {
-        _result = 'Error: $e';
         _isProcessing = false;
       });
     }
@@ -351,8 +363,7 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
                         ),
                       )
                     : const Icon(Icons.camera_alt),
-                label: Text(
-                    _isProcessing ? 'Memproses...' : 'Ambil & Deteksi Gambar',
+                label: Text(_isProcessing ? 'Memproses...' : 'Ambil Gambar',
                     style: GoogleFonts.poppins(fontSize: 16)),
                 onPressed: _isProcessing ? null : _captureAndProcessImage,
                 style: ElevatedButton.styleFrom(
@@ -364,37 +375,6 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
-              if (_processedImageFile != null && !_isProcessing)
-                Column(
-                  children: [
-                    Text("Gambar yang Diproses:",
-                        style: GoogleFonts.poppins(
-                            fontSize: 16, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.file(_processedImageFile!,
-                          height: 200, width: 200, fit: BoxFit.cover),
-                    ),
-                    const SizedBox(height: 10),
-                  ],
-                ),
-              if (_result.isNotEmpty)
-                Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text(
-                      _result,
-                      style: GoogleFonts.poppins(
-                          fontSize: 16, fontWeight: FontWeight.w500),
-                      textAlign: TextAlign.left,
-                    ),
-                  ),
-                ),
               const SizedBox(height: 20),
             ],
           ),

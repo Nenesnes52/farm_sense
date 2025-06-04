@@ -1,5 +1,5 @@
 import 'package:camera/camera.dart';
-import 'package:farm_sense/chicken_disease_detector.dart';
+import 'package:farm_sense/pages/disease/chicken_disease_detector.dart';
 import 'package:flutter/material.dart';
 
 class MainMenu extends StatefulWidget {
@@ -107,27 +107,30 @@ class MainMenuState extends State<MainMenu> {
                                 ),
                               ),
                               SizedBox(height: 20),
-                              GestureDetector(
-                                onTap: () {},
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  padding: EdgeInsets.symmetric(
-                                      horizontal: 20, vertical: 10),
-                                  child: Column(
-                                    children: [
-                                      Text(
-                                        'Riwayat Hasil Deteksi',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w900,
-                                          fontSize: 16,
+                              Semantics(
+                                button: true,
+                                child: GestureDetector(
+                                  onTap: () {},
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: 20, vertical: 10),
+                                    child: Column(
+                                      children: [
+                                        Text(
+                                          'Riwayat Hasil Deteksi',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w900,
+                                            fontSize: 16,
+                                          ),
                                         ),
-                                      ),
-                                      SizedBox(height: 10),
-                                      Image.asset('assets/images/history.png')
-                                    ],
+                                        SizedBox(height: 10),
+                                        Image.asset('assets/images/history.png')
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),

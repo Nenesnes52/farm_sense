@@ -812,8 +812,8 @@ class AuthenticationState extends State<Authentication> with GetItStateMixin {
       password: passwordController.text.trim(),
       onSuccess: () {
         final snackBar = SnackBar(
-          content: Text(
-              'Masuk ke akun dengan username ${usernameController.text.trim()}'),
+          content:
+              Text('Masuk ke akun sebagai ${usernameController.text.trim()}'),
         );
         ScaffoldMessenger.of(context).showSnackBar(snackBar);
         Navigator.pushReplacementNamed(context, mainRoute);
