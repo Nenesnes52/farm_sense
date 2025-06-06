@@ -2,6 +2,7 @@ import 'package:farm_sense/models/farm_sense_model.dart';
 import 'package:farm_sense/provider.dart';
 import 'package:farm_sense/routes/route_name.dart';
 import 'package:farm_sense/widgets/error_dialog.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -141,13 +142,13 @@ class AuthenticationState extends State<Authentication> with GetItStateMixin {
                                     height: 30,
                                   ),
                                   TextFormField(
-                                    controller: usernameController,
+                                    controller: emailController,
                                     keyboardType: TextInputType.text,
                                     textInputAction: TextInputAction.next,
-                                    focusNode: usernameFocus,
+                                    focusNode: emailFocus,
                                     validator: (value) {
                                       if (value == null) {
-                                        return 'Invalid username';
+                                        return 'Invalid email';
                                       } else {
                                         return null;
                                       }
@@ -169,7 +170,7 @@ class AuthenticationState extends State<Authentication> with GetItStateMixin {
                                       //   Icons.person_outline_rounded,
                                       //   color: Color.fromRGBO(2, 84, 100, 1),
                                       // ),
-                                      labelText: 'Username',
+                                      labelText: 'Email',
                                       labelStyle: TextStyle(
                                         fontFamily:
                                             GoogleFonts.plusJakartaSans()
@@ -244,18 +245,16 @@ class AuthenticationState extends State<Authentication> with GetItStateMixin {
                                       FocusScope.of(context).unfocus();
 
                                       if (kDebugMode) {
-                                        print(usernameController.text);
+                                        print(emailController.text);
                                         print(passwordController.text);
                                       }
-                                      if (usernameController.text
-                                          .trim()
-                                          .isEmpty) {
+                                      if (emailController.text.trim().isEmpty) {
                                         showErrorDialog(
                                           context: context,
                                           message: 'Error',
                                           description:
-                                              'Username tidak boleh kosong',
-                                          solution: 'Masukkan Username',
+                                              'Email tidak boleh kosong',
+                                          solution: 'Masukkan Email',
                                         );
                                       } else if (passwordController.text
                                           .trim()
@@ -278,19 +277,19 @@ class AuthenticationState extends State<Authentication> with GetItStateMixin {
                                   IconButton(
                                     padding: EdgeInsets.all(0),
                                     onPressed: () async {
+                                      FocusScope.of(context).unfocus();
+
                                       if (kDebugMode) {
-                                        print(usernameController.text);
+                                        print(emailController.text);
                                         print(passwordController.text);
                                       }
-                                      if (usernameController.text
-                                          .trim()
-                                          .isEmpty) {
+                                      if (emailController.text.trim().isEmpty) {
                                         showErrorDialog(
                                           context: context,
                                           message: 'Error',
                                           description:
-                                              'Username tidak boleh kosong',
-                                          solution: 'Masukkan username',
+                                              'Email tidak boleh kosong',
+                                          solution: 'Masukkan Email',
                                         );
                                       } else if (passwordController.text
                                           .trim()
@@ -300,7 +299,7 @@ class AuthenticationState extends State<Authentication> with GetItStateMixin {
                                           message: 'Error',
                                           description:
                                               'Password tidak boleh kosong',
-                                          solution: 'Masukkan password',
+                                          solution: 'Masukkan Password',
                                         );
                                       } else {
                                         _handleSignIn();
@@ -806,43 +805,47 @@ class AuthenticationState extends State<Authentication> with GetItStateMixin {
     );
   }
 
+// Di dalam AuthenticationState di file authentication.dart
+
   void _handleSignIn() {
+    // Atau _handleSignInFirebase jika Anda sudah membuat versi Firebase
+    // Pastikan Anda menggunakan emailController untuk email
+    // Jika sebelumnya usernameController digunakan untuk email, tidak masalah.
+    // Jika usernameController untuk username asli, Anda perlu menggantinya dengan emailController.text.trim()
+    // untuk parameter 'email' di model.handleSignIn.
     model.handleSignIn(
-      username: usernameController.text.trim(),
+      email: emailController.text.trim(),
       password: passwordController.text.trim(),
-      onSuccess: () {
+      onSuccess: (User user) {
+        // Tangkap objek User
         final snackBar = SnackBar(
-          content:
-              Text('Masuk ke akun sebagai ${usernameController.text.trim()}'),
+          content: Text('Masuk ke akun  ${user.email}'), // Gunakan user.email
         );
         ScaffoldMessenger.of(context).showSnackBar(snackBar);
         Navigator.pushReplacementNamed(context, mainRoute);
       },
-      onFailed: () {
-        // final snackBar = SnackBar(
-        //   content:
-        //       Text('Gagal masuk ke akun ${usernameController.text.trim()}'),
-        // );
-        // ScaffoldMessenger.of(context).showSnackBar(snackBar);
-
+      onFailed: (String errorMessage) {
+        // Tangkap pesan error
         showErrorDialog(
             context: context,
             message: 'Gagal Masuk',
-            description: 'Username atau password salah');
+            description: errorMessage); // Tampilkan pesan error dari Firebase
       },
     );
   }
 
   void _handleSignUp() {
+    // Atau _handleSignUpFirebase
     model.handleSignUp(
-      name: fullNameController.text.trim(),
       email: emailController.text.trim(),
-      username: usernameController.text.trim(),
       password: passwordController.text.trim(),
-      onSuccess: () {
+      name: fullNameController.text.trim(), // Akan diteruskan ke model
+      username: usernameController.text.trim(), // Akan diteruskan ke model
+      onSuccess: (User user) {
+        // Tangkap objek User
         final snackBar = SnackBar(
           content: Text(
-              'Akun dengan username ${usernameController.text.trim()} berhasil dibuat'),
+              'Akun untuk ${user.email} berhasil dibuat'), // Gunakan user.email
         );
         ScaffoldMessenger.of(context).showSnackBar(snackBar);
         setState(() {
@@ -856,15 +859,12 @@ class AuthenticationState extends State<Authentication> with GetItStateMixin {
           }
         });
       },
-      onFailed: () {
-        // final snackBar = SnackBar(
-        //   content: Text('Gagal membuat ke akun'),
-        // );
-        // ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      onFailed: (String errorMessage) {
+        // Tangkap pesan error
         showErrorDialog(
           context: context,
           message: 'Terjadi Kesalahan',
-          description: 'Gagal membuat akun',
+          description: errorMessage, // Tampilkan pesan error dari Firebase
         );
       },
     );

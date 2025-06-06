@@ -299,17 +299,15 @@ class ClassificationResult extends StatelessWidget {
                 children: <Widget>[
                   if (processedImageFile != null)
                     Center(
-                      child: Expanded(
-                        child: Card(
-                          elevation: 2,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          clipBehavior: Clip.antiAlias,
-                          child: Image.file(
-                            processedImageFile!,
-                            fit: BoxFit.cover,
-                          ),
+                      child: Card(
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: Image.file(
+                          processedImageFile!,
+                          fit: BoxFit.cover,
                         ),
                       ),
                     ),
