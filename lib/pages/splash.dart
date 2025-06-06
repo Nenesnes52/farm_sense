@@ -28,7 +28,7 @@ class _SplashState extends State<Splash> with GetItStateMixin {
           Navigator.pushReplacementNamed(
               context,
               // loggedIn ? mainRoute :
-              authRoute);
+              wrapperRoute);
         }
       },
     );

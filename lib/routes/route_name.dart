@@ -5,6 +5,8 @@ const String authSignUpRoute = '/auth/signup';
 const String authVerifyRoute = '/auth/verify';
 const String authResetPasswordRoute = '/auth/reset';
 
+const String wrapperRoute = '/wrapper';
+
 const String mainRoute = '/main';
 const String homeRoute = '/home';
 const String farmRoute = '/farm';
