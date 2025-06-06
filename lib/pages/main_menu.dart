@@ -1,5 +1,7 @@
 import 'dart:io'; // Diperlukan untuk File
 import 'package:camera/camera.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:farm_sense/routes/route_name.dart';
 import 'package:farm_sense/pages/disease/chicken_disease_detector.dart';
 import 'package:flutter/foundation.dart'; // Diperlukan untuk kDebugMode
 import 'package:flutter/material.dart';
@@ -7,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image/image.dart' as img; // Package untuk manipulasi gambar
 import 'package:tflite_flutter/tflite_flutter.dart'; // Package TFLite
+import 'package:firebase_auth/firebase_auth.dart'; // Untuk mendapatkan user saat ini
 
 // Import halaman hasil klasifikasi Anda
 import 'package:farm_sense/pages/disease/classification_result.dart'; // Sesuaikan path jika berbeda
@@ -28,6 +31,8 @@ class MainMenuState extends State<MainMenu> {
       _interpreter; // Dijadikan nullable, akan diinisialisasi di _loadModel
   final int _inputSize = 224;
   bool _isProcessing = false; // Untuk loading indicator jika diperlukan
+  DocumentSnapshot? _latestHistory; // Untuk menyimpan data riwayat terbaru
+  bool _isLoadingHistory = true; // Untuk loading indicator riwayat
 
   // Variabel lain yang sudah ada
   DateTime? _lastBackPressed;
@@ -36,6 +41,7 @@ class MainMenuState extends State<MainMenu> {
   void initState() {
     super.initState();
     _loadModel(); // Muat model TFLite saat initState
+    _fetchLatestHistory(); // Ambil riwayat terbaru
   }
 
   Future<void> _loadModel() async {
@@ -60,6 +66,34 @@ class MainMenuState extends State<MainMenu> {
         );
       }
     }
+  }
+
+  Future<void> _fetchLatestHistory() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      setState(() {
+        _isLoadingHistory = false;
+      });
+      return;
+    }
+
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('detection_history')
+          .where('userId', isEqualTo: currentUser.uid)
+          .orderBy('timestamp', descending: true)
+          .limit(1)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        _latestHistory = querySnapshot.docs.first;
+      }
+    } catch (e) {
+      if (kDebugMode) print("Error fetching latest history: $e");
+    }
+    setState(() {
+      _isLoadingHistory = false;
+    });
   }
 
   List<String> _getLabels() {
@@ -250,7 +284,7 @@ class MainMenuState extends State<MainMenu> {
 
   @override
   void dispose() {
-    _interpreter?.close(); // Tutup interpreter jika tidak null
+    _interpreter?.close();
     super.dispose();
   }
 
@@ -259,7 +293,6 @@ class MainMenuState extends State<MainMenu> {
     return WillPopScope(
       onWillPop: _onWillPop,
       child: Container(
-        // ... (Dekorasi Container Anda tidak berubah) ...
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -271,209 +304,299 @@ class MainMenuState extends State<MainMenu> {
             ],
           ),
         ),
-        child: SafeArea(
-          child: Stack(
-            alignment: Alignment.bottomCenter,
-            children: [
-              Scaffold(
-                backgroundColor: Colors.transparent,
-                body: Center(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Image.asset(
-                        'assets/images/logo_image.png',
-                        height: 150,
-                        width: 150,
-                      ),
-                      SizedBox(height: 10),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Color.fromRGBO(2, 77, 91, 1),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          padding: EdgeInsets.all(20),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                padding: EdgeInsets.all(20),
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      'Riwayat Terakhir',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w900,
-                                        fontSize: 32,
-                                      ),
-                                    ),
-                                    SizedBox(height: 20),
-                                    Text('Belum ada riwayat'),
-                                  ],
-                                ),
-                              ),
-                              SizedBox(height: 20),
-                              // ... (Widget Riwayat Hasil Deteksi Anda tidak berubah) ...
-                              Semantics(
-                                button: true,
-                                child: GestureDetector(
-                                  onTap: () {
-                                    // Tambahkan navigasi ke halaman riwayat jika ada
-                                  },
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    padding: EdgeInsets.symmetric(
-                                        horizontal: 20, vertical: 10),
-                                    child: Column(
-                                      children: [
-                                        Text(
-                                          'Riwayat Hasil Deteksi',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w900,
-                                            fontSize: 16,
-                                          ),
-                                        ),
-                                        SizedBox(height: 10),
-                                        Image.asset('assets/images/history.png')
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(height: 20),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: GestureDetector(
-                                      onTap: _isProcessing
-                                          ? null
-                                          : _pickImageFromGallery, // Panggil fungsi di sini
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius:
-                                              BorderRadius.circular(10),
-                                        ),
-                                        padding: EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 10),
-                                        child: Column(
-                                          children: [
-                                            Text(
-                                              'Unggah Gambar',
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.w900,
-                                                fontSize: 16,
-                                              ),
-                                            ),
-                                            SizedBox(
-                                                height: _isProcessing ? 10 : 0),
-                                            _isProcessing
-                                                ? CircularProgressIndicator(
-                                                    valueColor:
-                                                        AlwaysStoppedAnimation<
-                                                            Color>(
-                                                      Theme.of(context)
-                                                          .primaryColor,
-                                                    ),
-                                                  )
-                                                : Image.asset(
-                                                    'assets/images/upload.png',
-                                                    height: 90,
-                                                    width: 90,
-                                                  )
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(width: 20),
-                                  Expanded(
-                                    child: GestureDetector(
-                                      onTap: () async {
-                                        // Fungsi Ambil Gambar tetap sama
-                                        // ... (kode onTap Ambil Gambar Anda tidak berubah) ...
-                                        final camerasAvailable =
-                                            await availableCameras();
-                                        if (camerasAvailable.isEmpty) {
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(
-                                            SnackBar(
-                                                content: Text(
-                                                    "Tidak ada kamera tersedia.")),
-                                          );
-                                          return;
-                                        }
-                                        final firstCamera =
-                                            camerasAvailable.firstWhere(
-                                          (camera) =>
-                                              camera.lensDirection ==
-                                              CameraLensDirection.back,
-                                          orElse: () => camerasAvailable
-                                              .first, // Fallback jika tidak ada kamera belakang
-                                        );
-
-                                        if (context.mounted) {
-                                          Navigator.of(context).push(
-                                            MaterialPageRoute(
-                                              builder: (_) =>
-                                                  ChickenDiseaseDetector(
-                                                // Halaman ini tetap untuk ambil gambar via kamera
-                                                camera: firstCamera,
-                                              ),
-                                            ),
-                                          );
-                                        }
-                                      },
-                                      child: Container(
-                                        // ... (Container Ambil Gambar Anda tidak berubah) ...
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius:
-                                              BorderRadius.circular(10),
-                                        ),
-                                        padding: EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 10),
-                                        child: Column(
-                                          children: [
-                                            Text(
-                                              'Ambil Gambar',
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.w900,
-                                                fontSize: 16,
-                                              ),
-                                            ),
-                                            Image.asset(
-                                              'assets/images/capture.png',
-                                              height: 90,
-                                              width: 90,
-                                            )
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                ],
-                              )
-                            ],
-                          ),
+        child: Stack(
+          alignment: Alignment.bottomCenter,
+          children: [
+            Scaffold(
+              backgroundColor: Colors.transparent,
+              body: Center(
+                child: Column(
+                  // crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  // mainAxisSize: MainAxisSize.min, // Hapus ini agar Column bisa mengisi ruang
+                  children: [
+                    Flexible(
+                      // Gunakan Flexible untuk logo agar bisa menyesuaikan
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 20.0), // Tambahkan padding vertikal
+                        child: Image.asset(
+                          'assets/images/logo_image.png',
+                          height: MediaQuery.of(context).size.width * 0.4,
+                          width: MediaQuery.of(context).size.width * 0.4,
                         ),
-                      )
-                    ],
-                  ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Color.fromRGBO(2, 77, 91, 1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: EdgeInsets.all(
+                            MediaQuery.of(context).size.width *
+                                0.05), // Padding relatif
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              padding: EdgeInsets.all(
+                                  MediaQuery.of(context).size.width *
+                                      0.04), // Padding relatif
+                              child: Column(
+                                children: [
+                                  Text(
+                                    'Riwayat Terakhir',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                      fontSize:
+                                          MediaQuery.of(context).size.width *
+                                              0.07, // Ukuran font relatif
+                                      color: Color.fromRGBO(2, 84, 100,
+                                          1), // Pastikan warna teks konsisten
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  SizedBox(height: 10),
+                                  _isLoadingHistory // Widget ini sudah menangani state loading
+                                      ? CircularProgressIndicator()
+                                      : _latestHistory == null
+                                          ? Text('Belum ada riwayat')
+                                          : Column(
+                                              // crossAxisAlignment:
+                                              //     CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  "${_latestHistory!['detectionDate'] ?? 'N/A'}",
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w900,
+                                                    color: Color.fromRGBO(
+                                                        2, 84, 100, 1),
+                                                  ),
+                                                ),
+                                                Text(
+                                                  "${_latestHistory!['topLabel'] ?? 'N/A'}",
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Color.fromRGBO(
+                                                        2, 84, 100, 1),
+                                                  ),
+                                                  overflow: TextOverflow
+                                                      .ellipsis, // Cegah teks terlalu panjang
+                                                  maxLines: 1,
+                                                ),
+                                                // SizedBox(height: 5),
+                                                // Text(
+                                                //   "Persentase: ${(_latestHistory!['topValue'] as num?)?.toStringAsFixed(2) ?? '0.00'}%",
+                                                //   style:
+                                                //       TextStyle(fontSize: 14),
+                                                // ),
+                                                // SizedBox(height: 5),
+                                                // Text(
+                                                //   "Waktu: ${_latestHistory!['detectionTime'] ?? 'N/A'}",
+                                                //   style: TextStyle(
+                                                //       fontSize: 12,
+                                                //       color:
+                                                //           Colors.grey[700]),
+                                                // ),
+                                              ],
+                                            ),
+                                ],
+                              ), // Akhir dari Container Riwayat Terakhir
+                            ),
+                            SizedBox(height: 20),
+                            Semantics(
+                              button: true,
+                              child: GestureDetector(
+                                onTap: () {
+                                  Navigator.pushNamed(context, historyRoute);
+                                },
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal:
+                                          MediaQuery.of(context).size.width *
+                                              0.05,
+                                      vertical: 10), // Padding relatif
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        'Riwayat Hasil Deteksi',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: MediaQuery.of(context)
+                                                  .size
+                                                  .width *
+                                              0.04, // Ukuran font relatif
+                                          color: Color.fromRGBO(2, 84, 100, 1),
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      SizedBox(height: 10),
+                                      Image.asset('assets/images/history.png')
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: 20),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: _isProcessing
+                                        ? null
+                                        : _pickImageFromGallery,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: MediaQuery.of(context)
+                                                  .size
+                                                  .width *
+                                              0.025,
+                                          vertical: 10), // Padding relatif
+                                      child: Column(
+                                        children: [
+                                          Text(
+                                            'Unggah Gambar',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w900,
+                                              fontSize: MediaQuery.of(context)
+                                                      .size
+                                                      .width *
+                                                  0.038, // Ukuran font relatif
+                                              color:
+                                                  Color.fromRGBO(2, 84, 100, 1),
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                          SizedBox(
+                                              height: _isProcessing ? 10 : 0),
+                                          _isProcessing
+                                              ? CircularProgressIndicator(
+                                                  valueColor:
+                                                      AlwaysStoppedAnimation<
+                                                          Color>(
+                                                    Theme.of(context)
+                                                        .primaryColor,
+                                                  ),
+                                                )
+                                              : Image.asset(
+                                                  'assets/images/upload.png', // Pastikan path ini benar
+                                                  height: MediaQuery.of(context)
+                                                          .size
+                                                          .width *
+                                                      0.18, // Ukuran relatif
+                                                  width: MediaQuery.of(context)
+                                                          .size
+                                                          .width *
+                                                      0.18, // Ukuran relatif
+                                                )
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: 20),
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: () async {
+                                      final camerasAvailable =
+                                          await availableCameras();
+                                      if (camerasAvailable.isEmpty) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                              content: Text(
+                                                  "Tidak ada kamera tersedia.")),
+                                        );
+                                        return;
+                                      }
+                                      final firstCamera =
+                                          camerasAvailable.firstWhere(
+                                        (camera) =>
+                                            camera.lensDirection ==
+                                            CameraLensDirection.back,
+                                        orElse: () => camerasAvailable.first,
+                                      );
+
+                                      if (context.mounted) {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                ChickenDiseaseDetector(
+                                              camera: firstCamera,
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: MediaQuery.of(context)
+                                                  .size
+                                                  .width *
+                                              0.025,
+                                          vertical: 10), // Padding relatif
+                                      child: Column(
+                                        children: [
+                                          Text(
+                                            'Ambil Gambar',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w900,
+                                              fontSize: MediaQuery.of(context)
+                                                      .size
+                                                      .width *
+                                                  0.038, // Ukuran font relatif
+                                              color:
+                                                  Color.fromRGBO(2, 84, 100, 1),
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                          Image.asset(
+                                            'assets/images/capture.png', // Pastikan path ini benar
+                                            height: MediaQuery.of(context)
+                                                    .size
+                                                    .width *
+                                                0.18, // Ukuran relatif
+                                            width: MediaQuery.of(context)
+                                                    .size
+                                                    .width *
+                                                0.18, // Ukuran relatif
+                                          )
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              ],
+                            )
+                          ],
+                        ),
+                      ),
+                    )
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

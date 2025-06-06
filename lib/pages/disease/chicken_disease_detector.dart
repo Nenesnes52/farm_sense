@@ -317,7 +317,7 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Deteksi Penyakit Ayam', style: GoogleFonts.poppins()),
-        backgroundColor: Theme.of(context).primaryColor,
+        backgroundColor: Color.fromRGBO(7, 135, 160, 1),
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(

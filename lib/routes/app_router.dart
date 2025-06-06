@@ -1,5 +1,6 @@
 import 'package:farm_sense/auth_wrapper.dart';
 import 'package:farm_sense/pages/authentication.dart';
+import 'package:farm_sense/pages/disease/detection_history.dart';
 import 'package:farm_sense/pages/main_menu.dart';
 import 'package:farm_sense/pages/splash.dart';
 import 'package:farm_sense/routes/route_name.dart';
@@ -21,6 +22,7 @@ class AppRouter {
       splashRoute: (context) => Splash(),
       authRoute: (context) => Authentication(),
       wrapperRoute: (context) => AuthWrapper(),
+      historyRoute: (context) => DetectionHistory(),
     };
   }
 }

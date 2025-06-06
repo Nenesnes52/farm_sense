@@ -1,9 +1,11 @@
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
-class ClassificationResult extends StatelessWidget {
+class ClassificationResult extends StatefulWidget {
   final double coccidiosis;
   final double sehat;
   final double newcastle;
@@ -23,40 +25,45 @@ class ClassificationResult extends StatelessWidget {
     super.key,
   });
 
+  @override
+  State<ClassificationResult> createState() => _ClassificationResultState();
+}
+
+class _ClassificationResultState extends State<ClassificationResult> {
   // Helper untuk baris persentase
-  Widget _buildResultRow(String label, double value, BuildContext context) {
-    bool isTop = label == topLabel;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              fontWeight: isTop ? FontWeight.w600 : FontWeight.normal,
-              color: isTop ? const Color(0xFF025464) : Colors.black87,
-            ),
-          ),
-          Text(
-            '${value.toStringAsFixed(2)}%',
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              fontWeight: isTop ? FontWeight.w600 : FontWeight.normal,
-              color: isTop ? const Color(0xFF025464) : Colors.black87,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // Widget _buildResultRow(String label, double value, BuildContext context) {
+  //   bool isTop = label == widget.topLabel;
+  //   return Padding(
+  //     padding: const EdgeInsets.symmetric(vertical: 5.0),
+  //     child: Row(
+  //       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  //       children: [
+  //         Text(
+  //           label,
+  //           style: GoogleFonts.plusJakartaSans(
+  //             fontSize: 14,
+  //             fontWeight: isTop ? FontWeight.w600 : FontWeight.normal,
+  //             color: isTop ? const Color(0xFF025464) : Colors.black87,
+  //           ),
+  //         ),
+  //         Text(
+  //           '${value.toStringAsFixed(2)}%',
+  //           style: GoogleFonts.plusJakartaSans(
+  //             fontSize: 14,
+  //             fontWeight: isTop ? FontWeight.w600 : FontWeight.normal,
+  //             color: isTop ? const Color(0xFF025464) : Colors.black87,
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   // Helper untuk item daftar bernomor
   Widget _buildNumberedListItem(BuildContext context, int number, String text,
       {TextStyle? style, bool isWarning = false}) {
-    final defaultStyle =
-        GoogleFonts.poppins(fontSize: 14, height: 1.6, color: Colors.black87);
+    final defaultStyle = GoogleFonts.plusJakartaSans(
+        fontSize: 14, height: 1.6, color: Colors.black87);
     return Padding(
       padding: const EdgeInsets.only(bottom: 6.0),
       child: Row(
@@ -87,8 +94,8 @@ class ClassificationResult extends StatelessWidget {
   // Helper untuk item daftar berpoin (bullet)
   Widget _buildBulletedListItem(BuildContext context, String text,
       {TextStyle? style, int indentLevel = 0, bool isWarning = false}) {
-    final defaultStyle =
-        GoogleFonts.poppins(fontSize: 14, height: 1.6, color: Colors.black87);
+    final defaultStyle = GoogleFonts.plusJakartaSans(
+        fontSize: 14, height: 1.6, color: Colors.black87);
     final bullet = indentLevel == 0 ? "•" : (indentLevel == 1 ? "◦" : "▪");
 
     return Padding(
@@ -124,10 +131,10 @@ class ClassificationResult extends StatelessWidget {
     String recommendationTitle = "Rekomendasi";
     String treatmentTitle = "Pengobatan";
 
-    TextStyle sectionHeaderStyle = GoogleFonts.poppins(
+    TextStyle sectionHeaderStyle = GoogleFonts.plusJakartaSans(
         fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey.shade800);
-    TextStyle normalTextStyle =
-        GoogleFonts.poppins(fontSize: 14, height: 1.6, color: Colors.black87);
+    TextStyle normalTextStyle = GoogleFonts.plusJakartaSans(
+        fontSize: 14, height: 1.6, color: Colors.black87);
 
     switch (disease) {
       case "Salmonella":
@@ -256,36 +263,102 @@ class ClassificationResult extends StatelessWidget {
       children: [
         Text(recommendationTitle, style: sectionHeaderStyle),
         const SizedBox(height: 10),
-        ...recommendations, // Menggunakan spread operator untuk memasukkan list widget
+        ...recommendations,
         const SizedBox(height: 20),
         Text(treatmentTitle, style: sectionHeaderStyle),
         const SizedBox(height: 10),
-        ...treatments, // Menggunakan spread operator
+        ...treatments,
       ],
     );
+  }
+
+  bool _isSaving = false;
+
+  Future<void> _saveDetectionResult() async {
+    if (_isSaving) return;
+    setState(() {
+      _isSaving = true;
+    });
+
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null || currentUser.email == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Gagal menyimpan: Pengguna tidak terautentikasi.'),
+            backgroundColor: Colors.red),
+      );
+      setState(() {
+        _isSaving = false;
+      });
+      return;
+    }
+
+    try {
+      final now = DateTime.now();
+      final String formattedDate =
+          DateFormat('d MMMM yyyy', 'id_ID').format(now);
+      final String formattedTime = DateFormat('HH:mm:ss', 'id_ID').format(now);
+
+      Map<String, dynamic> dataToSave = {
+        // 'userEmail': currentUser.email,
+        'userId': currentUser.uid,
+        'detectionDate': formattedDate,
+        'detectionTime': formattedTime,
+        'timestamp': FieldValue.serverTimestamp(), // Untuk pengurutan di server
+        'topLabel': widget.topLabel,
+        'topValue': widget.topValue,
+        'percentages': {
+          'Coccidiosis': widget.coccidiosis,
+          'Sehat': widget.sehat,
+          'Newcastle Disease': widget.newcastle,
+          'Salmonella': widget.salmonella,
+        },
+        // Anda bisa menambahkan URL gambar jika menyimpannya ke Firebase Storage
+        // 'imageUrl': 'URL_GAMBAR_JIKA_ADA'
+      };
+
+      await FirebaseFirestore.instance
+          .collection('detection_history')
+          .add(dataToSave);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Hasil deteksi berhasil disimpan.'),
+            backgroundColor: Colors.green),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Gagal menyimpan hasil: ${e.toString()}'),
+            backgroundColor: Colors.red),
+      );
+    } finally {
+      setState(() {
+        _isSaving = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final List<Map<String, dynamic>> results = [
-      {'label': 'Coccidiosis', 'value': coccidiosis},
-      {'label': 'Sehat', 'value': sehat},
-      {'label': 'Newcastle Disease', 'value': newcastle},
-      {'label': 'Salmonella', 'value': salmonella},
+      {'label': 'Coccidiosis', 'value': widget.coccidiosis},
+      {'label': 'Sehat', 'value': widget.sehat},
+      {'label': 'Newcastle Disease', 'value': widget.newcastle},
+      {'label': 'Salmonella', 'value': widget.salmonella},
     ];
     results
         .sort((a, b) => (b['value'] as double).compareTo(a['value'] as double));
 
-    final tealColor = const Color(0xFF025464);
-    final dateNow =
-        DateFormat('d MMMM yyyy, HH:mm', 'id_ID').format(DateTime.now());
+    final tealColor = Color.fromRGBO(91, 158, 172, 1);
+    final dateNow = DateFormat('d MMMM yyyy', 'id_ID').format(DateTime.now());
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: tealColor,
+        backgroundColor: Color.fromRGBO(7, 135, 160, 1),
         foregroundColor: Colors.white,
         title: Text('Hasil deteksi',
-            style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
+            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w500)),
         centerTitle: false,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -297,7 +370,7 @@ class ClassificationResult extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  if (processedImageFile != null)
+                  if (widget.processedImageFile != null)
                     Center(
                       child: Card(
                         elevation: 2,
@@ -306,7 +379,7 @@ class ClassificationResult extends StatelessWidget {
                         ),
                         clipBehavior: Clip.antiAlias,
                         child: Image.file(
-                          processedImageFile!,
+                          widget.processedImageFile!,
                           fit: BoxFit.cover,
                         ),
                       ),
@@ -319,70 +392,89 @@ class ClassificationResult extends StatelessWidget {
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
-                      child: Column(
+                      child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Hasil Deteksi',
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              color: Colors.grey.shade600,
-                            ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Hasil Deteksi',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  color: Color.fromRGBO(108, 145, 153, 1),
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              // const SizedBox(height: 4),
+                              Text(
+                                widget.topLabel,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color.fromRGBO(2, 84, 100, 1),
+                                ),
+                              ),
+                              // const SizedBox(height: 2),
+                              // Text(
+                              //   '(${widget.topValue.toStringAsFixed(2)}% terdeteksi)',
+                              //   style: GoogleFonts.plusJakartaSans(
+                              //     fontSize: 15, // Sedikit lebih besar
+                              //     fontWeight: FontWeight.normal,
+                              //     color: Colors.black54,
+                              //   ),
+                              // ),
+                              // const SizedBox(height: 10),
+                              // const Divider(height: 24, thickness: 0.5),
+                              // Text(
+                              //   'Detail Persentase Lainnya:',
+                              //   style: GoogleFonts.plusJakartaSans(
+                              //       fontSize: 14,
+                              //       color: Colors.grey.shade700,
+                              //       fontWeight: FontWeight.w500),
+                              // ),
+                              // const SizedBox(height: 4),
+                              // ...results
+                              //     .where((result) =>
+                              //         result['label'] !=
+                              //         widget
+                              //             .topLabel) // Tampilkan yang bukan topLabel
+                              //     .map((result) => _buildResultRow(
+                              //         result['label'] as String,
+                              //         result['value'] as double,
+                              //         context)),
+                            ],
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            topLabel,
-                            style: GoogleFonts.poppins(
-                              fontSize: 22, // Sedikit lebih besar
-                              fontWeight: FontWeight.bold,
-                              color: tealColor,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '(${topValue.toStringAsFixed(2)}% terdeteksi)',
-                            style: GoogleFonts.poppins(
-                              fontSize: 15, // Sedikit lebih besar
-                              fontWeight: FontWeight.normal,
-                              color: Colors.black54,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
+                          Spacer(),
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.end,
                             // Untuk ikon dan tanggal
                             children: [
-                              Icon(
-                                Icons.calendar_today_outlined,
-                                size: 14,
-                                color: Colors.grey.shade600,
-                              ),
-                              const SizedBox(width: 6),
+                              // Icon(
+                              //   Icons.calendar_today_outlined,
+                              //   size: 14,
+                              //   color: Colors.grey.shade600,
+                              // ),
                               Text(
-                                'Tanggal deteksi: $dateNow',
-                                style: GoogleFonts.poppins(
+                                'Tanggal deteksi',
+                                style: GoogleFonts.plusJakartaSans(
                                   fontSize: 12,
-                                  color: Colors.grey.shade600,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color.fromRGBO(108, 145, 153, 1),
+                                ),
+                              ),
+                              // const SizedBox(height: 6),
+                              Text(
+                                dateNow,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color.fromRGBO(2, 84, 100, 1),
                                 ),
                               ),
                             ],
                           ),
-                          const Divider(height: 24, thickness: 0.5),
-                          Text(
-                            'Detail Persentase Lainnya:',
-                            style: GoogleFonts.poppins(
-                                fontSize: 14,
-                                color: Colors.grey.shade700,
-                                fontWeight: FontWeight.w500),
-                          ),
-                          const SizedBox(height: 4),
-                          ...results
-                              .where((result) =>
-                                  result['label'] !=
-                                  topLabel) // Tampilkan yang bukan topLabel
-                              .map((result) => _buildResultRow(
-                                  result['label'] as String,
-                                  result['value'] as double,
-                                  context)),
                         ],
                       ),
                     ),
@@ -395,7 +487,8 @@ class ClassificationResult extends StatelessWidget {
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
-                      child: _buildDiseaseSpecificInfo(context, topLabel),
+                      child:
+                          _buildDiseaseSpecificInfo(context, widget.topLabel),
                     ),
                   ),
                   const SizedBox(height: 24), // Tambahan spasi sebelum tombol
@@ -434,8 +527,36 @@ class ClassificationResult extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     child: Text('Kembali ke Beranda',
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.plusJakartaSans(
                             fontSize: 15, fontWeight: FontWeight.w500)),
+                  ),
+                ),
+                const SizedBox(width: 10), // Spasi antar tombol
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _isSaving ? null : _saveDetectionResult,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: tealColor,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    child: _isSaving
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Text(
+                            'Simpan Hasil',
+                            style: GoogleFonts.plusJakartaSans(
+                                fontSize: 15, fontWeight: FontWeight.w500),
+                          ),
                   ),
                 ),
               ],
