@@ -1,18 +1,17 @@
-import 'dart:io'; // Diperlukan untuk File
+import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:farm_sense/routes/route_name.dart';
 import 'package:farm_sense/pages/disease/chicken_disease_detector.dart';
-import 'package:flutter/foundation.dart'; // Diperlukan untuk kDebugMode
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
-import 'package:image/image.dart' as img; // Package untuk manipulasi gambar
-import 'package:tflite_flutter/tflite_flutter.dart'; // Package TFLite
-import 'package:firebase_auth/firebase_auth.dart'; // Untuk mendapatkan user saat ini
+import 'package:image/image.dart' as img;
+import 'package:tflite_flutter/tflite_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-// Import halaman hasil klasifikasi Anda
-import 'package:farm_sense/pages/disease/classification_result.dart'; // Sesuaikan path jika berbeda
+import 'package:farm_sense/pages/disease/classification_result.dart';
 
 class MainMenu extends StatefulWidget {
   const MainMenu({
@@ -36,6 +35,9 @@ class MainMenuState extends State<MainMenu> {
 
   // Variabel lain yang sudah ada
   DateTime? _lastBackPressed;
+
+  // GlobalKey untuk Scaffold
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
@@ -111,16 +113,19 @@ class MainMenuState extends State<MainMenu> {
       if (kDebugMode) {
         print("Interpreter TFLite belum siap.");
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Model AI belum siap, coba lagi nanti.")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text("Model AI belum siap, coba lagi nanti.")),
+        );
+      }
       return;
     }
 
     final ImagePicker picker = ImagePicker();
     final XFile? pickedFile = await picker.pickImage(
       source: ImageSource.gallery,
-      imageQuality: 100, // Kualitas gambar terbaik
+      imageQuality: 100,
     );
 
     if (pickedFile == null) return; // User membatalkan pemilihan
@@ -133,7 +138,7 @@ class MainMenuState extends State<MainMenu> {
       uiSettings: [
         AndroidUiSettings(
           toolbarTitle: 'Potong Gambar',
-          toolbarColor: Theme.of(context).primaryColor, // Sesuaikan warna
+          toolbarColor: Theme.of(context).primaryColor,
           toolbarWidgetColor: Colors.white,
           initAspectRatio: CropAspectRatioPreset.square,
           lockAspectRatio: true, // Kunci rasio aspek 1:1
@@ -153,9 +158,11 @@ class MainMenuState extends State<MainMenu> {
 
     final File imageFile = File(croppedFile.path);
 
-    setState(() {
-      _isProcessing = true; // Mulai proses, tampilkan loading jika ada
-    });
+    if (mounted) {
+      setState(() {
+        _isProcessing = true; // Mulai proses, tampilkan loading jika ada
+      });
+    }
 
     try {
       // Decode, resize ke _inputSize x _inputSize, dan normalisasi
@@ -263,8 +270,31 @@ class MainMenuState extends State<MainMenu> {
     }
   }
 
+  Future<void> _openCamera() async {
+    final camerasAvailable = await availableCameras();
+    if (!mounted) return; // Check if widget is still in the tree
+
+    if (camerasAvailable.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Tidak ada kamera tersedia.")),
+      );
+      return;
+    }
+    final firstCamera = camerasAvailable.firstWhere(
+      (camera) => camera.lensDirection == CameraLensDirection.back,
+      orElse: () => camerasAvailable.first,
+    );
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ChickenDiseaseDetector(
+          camera: firstCamera,
+        ),
+      ),
+    );
+  }
+
   Future<bool> _onWillPop() async {
-    // ... (kode _onWillPop Anda tidak berubah) ...
     DateTime now = DateTime.now();
 
     if (_lastBackPressed == null ||
@@ -273,7 +303,7 @@ class MainMenuState extends State<MainMenu> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Tekan sekali lagi untuk keluar"),
-          backgroundColor: Colors.black45.withValues(alpha: 0.7),
+          backgroundColor: Colors.black45.withAlpha(178), // 0.7 alpha
           duration: Duration(seconds: 3),
         ),
       );
@@ -308,18 +338,108 @@ class MainMenuState extends State<MainMenu> {
           alignment: Alignment.bottomCenter,
           children: [
             Scaffold(
+              key: _scaffoldKey, // Assign the key to Scaffold
               backgroundColor: Colors.transparent,
+              appBar: AppBar(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                leading: IconButton(
+                  icon: Icon(Icons.menu, color: Colors.white),
+                  onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+                ),
+              ),
+              drawer: Drawer(
+                child: Column(
+                  children: <Widget>[
+                    Expanded(
+                      child: ListView(
+                        padding: EdgeInsets.zero,
+                        children: <Widget>[
+                          DrawerHeader(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                stops: [0, 0.39],
+                                colors: [
+                                  Color.fromRGBO(2, 84, 100, 1),
+                                  Color.fromRGBO(91, 158, 172, 1),
+                                ],
+                              ),
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Image.asset(
+                                  'assets/images/logo_image.png', // Your logo
+                                  height: 120,
+                                ),
+                                // SizedBox(height: 10),
+                                // Text(
+                                //   'Farm Sense',
+                                //   style: TextStyle(
+                                //     color: Colors.white,
+                                //     fontSize: 18,
+                                //     fontWeight: FontWeight.bold,
+                                //   ),
+                                // ),
+                              ],
+                            ),
+                          ),
+                          ListTile(
+                            leading: Icon(Icons.camera_alt),
+                            title: Text('Ambil Gambar'),
+                            onTap: () {
+                              Navigator.pop(context); // Close drawer
+                              _openCamera();
+                            },
+                          ),
+                          ListTile(
+                            leading: Icon(Icons.photo_library),
+                            title: Text('Unggah Gambar'),
+                            onTap: () {
+                              Navigator.pop(context); // Close drawer
+                              _pickImageFromGallery();
+                            },
+                          ),
+                          ListTile(
+                            leading: Icon(Icons.history),
+                            title: Text('Riwayat Hasil Deteksi'),
+                            onTap: () {
+                              Navigator.pop(context); // Close drawer
+                              Navigator.pushNamed(context, historyRoute);
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    Divider(),
+                    ListTile(
+                      leading: Icon(Icons.logout),
+                      title: Text('Logout'),
+                      onTap: () async {
+                        Navigator.pop(context); // Close drawer
+                        await FirebaseAuth.instance.signOut();
+                        if (mounted) {
+                          // Make sure 'authRoute' is defined in your route_name.dart
+                          // and it leads to your login/authentication page.
+                          Navigator.of(context).pushNamedAndRemoveUntil(
+                              authRoute, (Route<dynamic> route) => false);
+                        }
+                      },
+                    ),
+                    SizedBox(height: 10), // Padding at the bottom
+                  ],
+                ),
+              ),
               body: Center(
                 child: Column(
-                  // crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  // mainAxisSize: MainAxisSize.min, // Hapus ini agar Column bisa mengisi ruang
+                  mainAxisAlignment: MainAxisAlignment.start,
                   children: [
                     Flexible(
-                      // Gunakan Flexible untuk logo agar bisa menyesuaikan
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 20.0), // Tambahkan padding vertikal
+                        padding: const EdgeInsets.symmetric(vertical: 20.0),
                         child: Image.asset(
                           'assets/images/logo_image.png',
                           height: MediaQuery.of(context).size.width * 0.4,
@@ -368,8 +488,6 @@ class MainMenuState extends State<MainMenu> {
                                       : _latestHistory == null
                                           ? Text('Belum ada riwayat')
                                           : Column(
-                                              // crossAxisAlignment:
-                                              //     CrossAxisAlignment.start,
                                               children: [
                                                 Text(
                                                   "${_latestHistory!['detectionDate'] ?? 'N/A'}",
@@ -388,28 +506,14 @@ class MainMenuState extends State<MainMenu> {
                                                     color: Color.fromRGBO(
                                                         2, 84, 100, 1),
                                                   ),
-                                                  overflow: TextOverflow
-                                                      .ellipsis, // Cegah teks terlalu panjang
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
                                                   maxLines: 1,
                                                 ),
-                                                // SizedBox(height: 5),
-                                                // Text(
-                                                //   "Persentase: ${(_latestHistory!['topValue'] as num?)?.toStringAsFixed(2) ?? '0.00'}%",
-                                                //   style:
-                                                //       TextStyle(fontSize: 14),
-                                                // ),
-                                                // SizedBox(height: 5),
-                                                // Text(
-                                                //   "Waktu: ${_latestHistory!['detectionTime'] ?? 'N/A'}",
-                                                //   style: TextStyle(
-                                                //       fontSize: 12,
-                                                //       color:
-                                                //           Colors.grey[700]),
-                                                // ),
                                               ],
                                             ),
                                 ],
-                              ), // Akhir dari Container Riwayat Terakhir
+                              ),
                             ),
                             SizedBox(height: 20),
                             Semantics(
@@ -427,7 +531,7 @@ class MainMenuState extends State<MainMenu> {
                                       horizontal:
                                           MediaQuery.of(context).size.width *
                                               0.05,
-                                      vertical: 10), // Padding relatif
+                                      vertical: 10),
                                   child: Column(
                                     children: [
                                       Text(
@@ -437,7 +541,7 @@ class MainMenuState extends State<MainMenu> {
                                           fontSize: MediaQuery.of(context)
                                                   .size
                                                   .width *
-                                              0.04, // Ukuran font relatif
+                                              0.04,
                                           color: Color.fromRGBO(2, 84, 100, 1),
                                         ),
                                         textAlign: TextAlign.center,
@@ -467,7 +571,7 @@ class MainMenuState extends State<MainMenu> {
                                                   .size
                                                   .width *
                                               0.025,
-                                          vertical: 10), // Padding relatif
+                                          vertical: 10),
                                       child: Column(
                                         children: [
                                           Text(
@@ -477,33 +581,58 @@ class MainMenuState extends State<MainMenu> {
                                               fontSize: MediaQuery.of(context)
                                                       .size
                                                       .width *
-                                                  0.038, // Ukuran font relatif
+                                                  0.038,
                                               color:
                                                   Color.fromRGBO(2, 84, 100, 1),
                                             ),
                                             textAlign: TextAlign.center,
                                           ),
                                           SizedBox(
-                                              height: _isProcessing ? 10 : 0),
+                                              height: _isProcessing
+                                                  ? 10
+                                                  : (_isProcessing
+                                                      ? 10
+                                                      : (MediaQuery.of(context)
+                                                              .size
+                                                              .width *
+                                                          0.18 *
+                                                          0.1))), // Dynamic Sizedbox based on image height
                                           _isProcessing
-                                              ? CircularProgressIndicator(
-                                                  valueColor:
-                                                      AlwaysStoppedAnimation<
-                                                          Color>(
-                                                    Theme.of(context)
-                                                        .primaryColor,
+                                              ? Padding(
+                                                  // Add padding around indicator
+                                                  padding: EdgeInsets.only(
+                                                      top: (MediaQuery.of(
+                                                                  context)
+                                                              .size
+                                                              .width *
+                                                          0.18 *
+                                                          0.3),
+                                                      bottom: (MediaQuery.of(
+                                                                  context)
+                                                              .size
+                                                              .width *
+                                                          0.18 *
+                                                          0.3)),
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                    valueColor:
+                                                        AlwaysStoppedAnimation<
+                                                            Color>(
+                                                      Theme.of(context)
+                                                          .primaryColor,
+                                                    ),
                                                   ),
                                                 )
                                               : Image.asset(
-                                                  'assets/images/upload.png', // Pastikan path ini benar
+                                                  'assets/images/upload.png',
                                                   height: MediaQuery.of(context)
                                                           .size
                                                           .width *
-                                                      0.18, // Ukuran relatif
+                                                      0.18,
                                                   width: MediaQuery.of(context)
                                                           .size
                                                           .width *
-                                                      0.18, // Ukuran relatif
+                                                      0.18,
                                                 )
                                         ],
                                       ),
@@ -513,37 +642,8 @@ class MainMenuState extends State<MainMenu> {
                                 SizedBox(width: 20),
                                 Expanded(
                                   child: GestureDetector(
-                                    onTap: () async {
-                                      final camerasAvailable =
-                                          await availableCameras();
-                                      if (camerasAvailable.isEmpty) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(
-                                              content: Text(
-                                                  "Tidak ada kamera tersedia.")),
-                                        );
-                                        return;
-                                      }
-                                      final firstCamera =
-                                          camerasAvailable.firstWhere(
-                                        (camera) =>
-                                            camera.lensDirection ==
-                                            CameraLensDirection.back,
-                                        orElse: () => camerasAvailable.first,
-                                      );
-
-                                      if (context.mounted) {
-                                        Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                            builder: (_) =>
-                                                ChickenDiseaseDetector(
-                                              camera: firstCamera,
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                    },
+                                    onTap:
+                                        _openCamera, // Use the new _openCamera method
                                     child: Container(
                                       decoration: BoxDecoration(
                                         color: Colors.white,
@@ -554,7 +654,7 @@ class MainMenuState extends State<MainMenu> {
                                                   .size
                                                   .width *
                                               0.025,
-                                          vertical: 10), // Padding relatif
+                                          vertical: 10),
                                       child: Column(
                                         children: [
                                           Text(
@@ -564,22 +664,28 @@ class MainMenuState extends State<MainMenu> {
                                               fontSize: MediaQuery.of(context)
                                                       .size
                                                       .width *
-                                                  0.038, // Ukuran font relatif
+                                                  0.038,
                                               color:
                                                   Color.fromRGBO(2, 84, 100, 1),
                                             ),
                                             textAlign: TextAlign.center,
                                           ),
+                                          SizedBox(
+                                              height: (MediaQuery.of(context)
+                                                      .size
+                                                      .width *
+                                                  0.18 *
+                                                  0.1)), // Dynamic Sizedbox based on image height
                                           Image.asset(
-                                            'assets/images/capture.png', // Pastikan path ini benar
+                                            'assets/images/capture.png',
                                             height: MediaQuery.of(context)
                                                     .size
                                                     .width *
-                                                0.18, // Ukuran relatif
+                                                0.18,
                                             width: MediaQuery.of(context)
                                                     .size
                                                     .width *
-                                                0.18, // Ukuran relatif
+                                                0.18,
                                           )
                                         ],
                                       ),
