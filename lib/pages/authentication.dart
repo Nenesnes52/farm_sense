@@ -71,12 +71,13 @@ class AuthenticationState extends State<Authentication> with GetItStateMixin {
       onWillPop: _onWillPop,
       child: Container(
         decoration: BoxDecoration(
+          // color: Color.fromRGBO(23, 132, 204, 0.65),
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            begin: Alignment.bottomCenter,
+            end: Alignment.topCenter,
             colors: [
-              Color.fromRGBO(2, 84, 100, 1),
-              Color.fromRGBO(42, 111, 125, 1),
+              Color.fromRGBO(70, 175, 244, 1),
+              Color.fromRGBO(12, 66, 102, 1),
             ],
           ),
         ),
@@ -143,7 +144,7 @@ class AuthenticationState extends State<Authentication> with GetItStateMixin {
                                   ),
                                   TextFormField(
                                     controller: emailController,
-                                    keyboardType: TextInputType.text,
+                                    keyboardType: TextInputType.emailAddress,
                                     textInputAction: TextInputAction.next,
                                     focusNode: emailFocus,
                                     validator: (value) {
@@ -313,17 +314,17 @@ class AuthenticationState extends State<Authentication> with GetItStateMixin {
                                       height: 44,
                                       alignment: Alignment.center,
                                       decoration: const BoxDecoration(
-                                        gradient: LinearGradient(
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                          colors: [
-                                            Color.fromRGBO(2, 84, 100, 1),
-                                            Color.fromRGBO(42, 111, 125, 1),
-                                          ],
-                                        ),
+                                        // gradient: LinearGradient(
+                                        //   begin: Alignment.topLeft,
+                                        //   end: Alignment.bottomRight,
+                                        //   colors: [
+                                        //     Color.fromRGBO(2, 84, 100, 1),
+                                        //     Color.fromRGBO(42, 111, 125, 1),
+                                        //   ],
+                                        // ),
                                         borderRadius: BorderRadius.all(
                                             Radius.circular(10)),
-                                        color: Color.fromRGBO(2, 84, 100, 1),
+                                        color: Color.fromRGBO(23, 132, 204, 1),
                                       ),
                                       child: isBusy == true
                                           ? SizedBox(
@@ -719,17 +720,17 @@ class AuthenticationState extends State<Authentication> with GetItStateMixin {
                                       height: 44,
                                       alignment: Alignment.center,
                                       decoration: const BoxDecoration(
-                                        gradient: LinearGradient(
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                          colors: [
-                                            Color.fromRGBO(2, 84, 100, 1),
-                                            Color.fromRGBO(42, 111, 125, 1),
-                                          ],
-                                        ),
+                                        // gradient: LinearGradient(
+                                        //   begin: Alignment.topLeft,
+                                        //   end: Alignment.bottomRight,
+                                        //   colors: [
+                                        //     Color.fromRGBO(2, 84, 100, 1),
+                                        //     Color.fromRGBO(42, 111, 125, 1),
+                                        //   ],
+                                        // ),
                                         borderRadius: BorderRadius.all(
                                             Radius.circular(10)),
-                                        color: Color.fromRGBO(2, 84, 100, 1),
+                                        color: Color.fromRGBO(23, 132, 204, 1),
                                       ),
                                       child: isBusy == true
                                           ? SizedBox(
@@ -805,47 +806,35 @@ class AuthenticationState extends State<Authentication> with GetItStateMixin {
     );
   }
 
-// Di dalam AuthenticationState di file authentication.dart
-
   void _handleSignIn() {
-    // Atau _handleSignInFirebase jika Anda sudah membuat versi Firebase
-    // Pastikan Anda menggunakan emailController untuk email
-    // Jika sebelumnya usernameController digunakan untuk email, tidak masalah.
-    // Jika usernameController untuk username asli, Anda perlu menggantinya dengan emailController.text.trim()
-    // untuk parameter 'email' di model.handleSignIn.
     model.handleSignIn(
       email: emailController.text.trim(),
       password: passwordController.text.trim(),
       onSuccess: (User user) {
-        // Tangkap objek User
         final snackBar = SnackBar(
-          content: Text('Masuk ke akun  ${user.email}'), // Gunakan user.email
+          content: Text('Masuk ke akun  ${user.email}'),
         );
         ScaffoldMessenger.of(context).showSnackBar(snackBar);
         Navigator.pushReplacementNamed(context, mainRoute);
       },
       onFailed: (String errorMessage) {
-        // Tangkap pesan error
         showErrorDialog(
             context: context,
             message: 'Gagal Masuk',
-            description: errorMessage); // Tampilkan pesan error dari Firebase
+            description: errorMessage);
       },
     );
   }
 
   void _handleSignUp() {
-    // Atau _handleSignUpFirebase
     model.handleSignUp(
       email: emailController.text.trim(),
       password: passwordController.text.trim(),
-      name: fullNameController.text.trim(), // Akan diteruskan ke model
-      username: usernameController.text.trim(), // Akan diteruskan ke model
+      name: fullNameController.text.trim(), //
+      username: usernameController.text.trim(),
       onSuccess: (User user) {
-        // Tangkap objek User
         final snackBar = SnackBar(
-          content: Text(
-              'Akun untuk ${user.email} berhasil dibuat'), // Gunakan user.email
+          content: Text('Akun untuk ${user.email} berhasil dibuat'),
         );
         ScaffoldMessenger.of(context).showSnackBar(snackBar);
         setState(() {
@@ -860,11 +849,10 @@ class AuthenticationState extends State<Authentication> with GetItStateMixin {
         });
       },
       onFailed: (String errorMessage) {
-        // Tangkap pesan error
         showErrorDialog(
           context: context,
           message: 'Terjadi Kesalahan',
-          description: errorMessage, // Tampilkan pesan error dari Firebase
+          description: errorMessage,
         );
       },
     );

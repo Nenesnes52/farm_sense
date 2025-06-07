@@ -39,12 +39,11 @@ class _SplashState extends State<Splash> with GetItStateMixin {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          stops: [0, 0.39],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
           colors: [
-            Color.fromRGBO(2, 84, 100, 1),
-            Color.fromRGBO(91, 158, 172, 1),
+            Color.fromRGBO(70, 175, 244, 1),
+            Color.fromRGBO(12, 66, 102, 1),
           ],
         ),
       ),

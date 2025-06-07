@@ -5,6 +5,7 @@ import 'package:camera/camera.dart';
 import 'package:farm_sense/pages/disease/classification_result.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:image/image.dart' as img;
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:google_fonts/google_fonts.dart'; // Ditambahkan untuk styling
@@ -316,9 +317,44 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Deteksi Penyakit Ayam', style: GoogleFonts.poppins()),
-        backgroundColor: Color.fromRGBO(7, 135, 160, 1),
+        toolbarHeight: 65,
+        leading: IconButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+          icon: SvgPicture.asset(
+            'assets/images/back-icon.svg',
+            fit: BoxFit.none,
+          ),
+        ),
+        title: Text(
+          'Deteksi Penyakit Ayam',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color.fromRGBO(23, 132, 204, 1),
+                Color.fromRGBO(11, 66, 102, 1)
+              ],
+            ),
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(10),
+              bottomRight: Radius.circular(10),
+            ),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.only(
+            bottomLeft: Radius.circular(10),
+            bottomRight: Radius.circular(10),
+          ),
+        ),
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -368,7 +404,7 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
                 onPressed: _isProcessing ? null : _captureAndProcessImage,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  backgroundColor: Theme.of(context).primaryColor,
+                  backgroundColor: Color.fromRGBO(23, 132, 204, 1),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),

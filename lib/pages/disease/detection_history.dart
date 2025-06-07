@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
@@ -20,15 +21,44 @@ class _DetectionHistoryState extends State<DetectionHistory> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Riwayat Deteksi', style: GoogleFonts.poppins()),
-        backgroundColor: Color.fromRGBO(7, 135, 160, 1),
+        toolbarHeight: 65,
+        leading: IconButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+          icon: SvgPicture.asset(
+            'assets/images/back-icon.svg',
+            fit: BoxFit.none,
+          ),
+        ),
+        title: Text(
+          'Riwayat Deteksi',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color.fromRGBO(23, 132, 204, 1),
+                Color.fromRGBO(11, 66, 102, 1)
+              ],
+            ),
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(10),
+              bottomRight: Radius.circular(10),
+            ),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
       ),
       body: _currentUser == null
           ? Center(
               child: Text(
                 'Silakan login untuk melihat riwayat.',
-                style: GoogleFonts.poppins(fontSize: 16),
+                style: GoogleFonts.plusJakartaSans(fontSize: 16),
               ),
             )
           : StreamBuilder<QuerySnapshot>(
@@ -44,13 +74,13 @@ class _DetectionHistoryState extends State<DetectionHistory> {
                 if (snapshot.hasError) {
                   return Center(
                       child: Text('Error: ${snapshot.error}',
-                          style: GoogleFonts.poppins()));
+                          style: GoogleFonts.plusJakartaSans()));
                 }
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return Center(
                     child: Text(
                       'Belum ada riwayat deteksi.',
-                      style: GoogleFonts.poppins(fontSize: 16),
+                      style: GoogleFonts.plusJakartaSans(fontSize: 16),
                     ),
                   );
                 }
@@ -90,27 +120,35 @@ class _DetectionHistoryState extends State<DetectionHistory> {
                     return Card(
                       elevation: 2,
                       margin: const EdgeInsets.symmetric(
-                          vertical: 8.0, horizontal: 4.0),
+                        vertical: 5.0,
+                        horizontal: 4.0,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
+                      color: Colors.white,
                       child: ListTile(
-                        contentPadding: const EdgeInsets.all(16.0),
-                        title: Text(
-                          topLabel,
-                          style: GoogleFonts.poppins(
+                        // contentPadding:
+                        //     const EdgeInsets.symmetric(horizontal: 16.0),
+                        subtitle: Text(
+                          'Terdeteksi $topLabel',
+                          style: GoogleFonts.plusJakartaSans(
                             fontWeight: FontWeight.bold,
-                            fontSize: 18,
+                            fontSize: 20,
                             color: tealColor,
                           ),
                         ),
-                        subtitle: Column(
+                        dense: true,
+                        title: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               formattedDateTime,
-                              style: GoogleFonts.poppins(
-                                  fontSize: 12, color: Colors.grey.shade600),
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                color: Color.fromRGBO(108, 145, 153, 1),
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ],
                         ),

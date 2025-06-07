@@ -17,29 +17,29 @@ class AuthWrapper extends StatelessWidget {
           );
         }
         if (snapshot.hasData && snapshot.data != null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content:
-                      Text('Selamat Datang Kembali, ${snapshot.data!.email}'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            }
-          });
+          // WidgetsBinding.instance.addPostFrameCallback((_) {
+          //   if (context.mounted) {
+          //     ScaffoldMessenger.of(context).showSnackBar(
+          //       SnackBar(
+          //         content:
+          //             Text('Selamat Datang Kembali, ${snapshot.data!.email}'),
+          //         backgroundColor: Colors.green,
+          //       ),
+          //     );
+          //   }
+          // });
           return const MainMenu();
         } else {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Silakan login'),
-                  backgroundColor: Colors.blue,
-                ),
-              );
-            }
-          });
+          // WidgetsBinding.instance.addPostFrameCallback((_) {
+          //   if (context.mounted) {
+          //     ScaffoldMessenger.of(context).showSnackBar(
+          //       const SnackBar(
+          //         content: Text('Silakan login'),
+          //         backgroundColor: Colors.blue,
+          //       ),
+          //     );
+          //   }
+          // });
           return Authentication();
         }
       },

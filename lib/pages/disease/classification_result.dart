@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:farm_sense/routes/route_name.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
@@ -284,9 +286,16 @@ class _ClassificationResultState extends State<ClassificationResult> {
     if (currentUser == null || currentUser.email == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Gagal menyimpan: Pengguna tidak terautentikasi.'),
-            backgroundColor: Colors.red),
+          content: Text('Gagal menyimpan: Pengguna tidak terautentikasi.'),
+          backgroundColor: Colors.red,
+        ),
       );
+      await FirebaseAuth.instance.signOut();
+      if (mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil(
+            authRoute, (Route<dynamic> route) => false);
+      }
+
       setState(() {
         _isSaving = false;
       });
@@ -355,10 +364,38 @@ class _ClassificationResultState extends State<ClassificationResult> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Color.fromRGBO(7, 135, 160, 1),
+        toolbarHeight: 65,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color.fromRGBO(23, 132, 204, 1),
+                Color.fromRGBO(11, 66, 102, 1)
+              ],
+            ),
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(10),
+              bottomRight: Radius.circular(10),
+            ),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
-        title: Text('Hasil deteksi',
-            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w500)),
+        leading: IconButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+          icon: SvgPicture.asset(
+            'assets/images/back-icon.svg',
+            fit: BoxFit.none,
+          ),
+        ),
+        title: Text(
+          'Hasil deteksi',
+          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w900),
+        ),
         centerTitle: false,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -526,9 +563,13 @@ class _ClassificationResultState extends State<ClassificationResult> {
                       ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: Text('Kembali ke Beranda',
-                        style: GoogleFonts.plusJakartaSans(
-                            fontSize: 15, fontWeight: FontWeight.w500)),
+                    child: Text(
+                      'Kembali ke Beranda',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10), // Spasi antar tombol

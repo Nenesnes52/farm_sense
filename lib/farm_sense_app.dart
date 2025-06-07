@@ -49,7 +49,7 @@ class FarmSenseApp extends StatelessWidget {
               fontFamily: GoogleFonts.plusJakartaSans().fontFamily),
         ),
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color.fromRGBO(2, 84, 100, 1),
+          seedColor: const Color.fromRGBO(23, 132, 204, 1),
         ),
         useMaterial3: true,
       ),

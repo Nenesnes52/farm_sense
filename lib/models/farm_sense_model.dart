@@ -15,6 +15,38 @@ class FarmSenseModel extends ChangeNotifier {
     }
   }
 
+  String _translateFirebaseAuthErrorMessage(
+      String errorCode, String defaultMessage) {
+    switch (errorCode) {
+      case 'invalid-email':
+        return 'Format email yang Anda masukkan tidak valid.';
+      case 'user-not-found':
+        return 'Pengguna dengan email tersebut tidak ditemukan.';
+      case 'wrong-password':
+        return 'Password yang Anda masukkan salah.';
+      case 'email-already-in-use':
+        return 'Email ini sudah digunakan oleh akun lain.';
+      case 'weak-password':
+        return 'Password terlalu lemah. Gunakan minimal 6 karakter.';
+      case 'operation-not-allowed':
+        return 'Operasi ini tidak diizinkan. Hubungi dukungan.';
+      case 'user-disabled':
+        return 'Akun pengguna ini telah dinonaktifkan.';
+      case 'too-many-requests':
+        return 'Terlalu banyak percobaan gagal. Silakan coba lagi nanti atau reset password Anda.';
+      case 'network-request-failed':
+        return 'Gagal terhubung ke server. Periksa koneksi internet Anda.';
+      case 'invalid-credential':
+        return 'Email atau password yang Anda masukkan salah.';
+      // Tambahkan case lain sesuai kebutuhan
+      default:
+        if (kDebugMode) {
+          print('Firebase Error Code: $errorCode, Message: $defaultMessage');
+        }
+        return defaultMessage; // Mengembalikan pesan default jika tidak ada terjemahan spesifik
+    }
+  }
+
   Future<void> handleSignIn({
     required String email,
     required String password,
@@ -43,7 +75,8 @@ class FarmSenseModel extends ChangeNotifier {
         print('Firebase SignIn Error: ${e.message}');
       }
       if (onFailed != null) {
-        onFailed(e.message ?? 'Terjadi kesalahan autentikasi.');
+        onFailed(_translateFirebaseAuthErrorMessage(
+            e.code, e.message ?? 'Terjadi kesalahan autentikasi.'));
       }
       completer.complete(false);
     } catch (e) {
@@ -90,7 +123,8 @@ class FarmSenseModel extends ChangeNotifier {
         print('Firebase SignUp Error: ${e.message}');
       }
       if (onFailed != null) {
-        onFailed(e.message ?? 'Terjadi kesalahan saat mendaftar.');
+        onFailed(_translateFirebaseAuthErrorMessage(
+            e.code, e.message ?? 'Terjadi kesalahan saat mendaftar.'));
       }
       completer.complete(false);
     } catch (e) {
