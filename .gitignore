@@ -46,3 +46,6 @@ app.*.map.json
 
 # Android native build artifacts
 /android/app/.cxx/
+
+# Firebase
+lib/firebase_options.dart
