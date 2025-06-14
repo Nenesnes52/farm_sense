@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:farm_sense/pages/disease/detection_history_detail.dart'; // Import DetectionHistoryDetail
 
 class DetectionHistory extends StatefulWidget {
   const DetectionHistory({super.key});
@@ -152,10 +153,15 @@ class _DetectionHistoryState extends State<DetectionHistory> {
                             ),
                           ],
                         ),
-                        // Anda bisa menambahkan onTap untuk melihat detail lebih lanjut jika diperlukan
-                        // onTap: () {
-                        //   // Navigasi ke halaman detail riwayat (jika ada)
-                        // },
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  DetectionHistoryDetail(detectionData: data),
+                            ),
+                          );
+                        },
                       ),
                     );
                   },
