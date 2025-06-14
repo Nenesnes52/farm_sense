@@ -1,0 +1,25 @@
+dev_dependencies:
+  flutter_launcher_icons: "^0.13.1"
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: false
+  image_path: "assets/launchers/android.png"
+  image_path_ios: "assets/launchers/ios.png"
+  image_path_android: "assets/launchers/android.png"
+  adaptive_icon_foreground: "assets/launchers/foreground.png" 
+  adaptive_icon_background: "assets/launchers/background.png"
+  min_sdk_android: 21 # android min sdk min:16, default 21
+  # web:
+  #   generate: false
+  #   image_path: "path/to/image.png"
+  #   background_color: "#hexcode"
+  #   theme_color: "#hexcode"
+  # windows:
+  #   generate: false
+  #   image_path: "path/to/image.png"
+  #   icon_size: 48 # min:48, max:256, default: 48
+  # macos:
+  #   generate: false
+  #   image_path: "path/to/image.png"
+  # Set the foreground image (same or different from image_path)

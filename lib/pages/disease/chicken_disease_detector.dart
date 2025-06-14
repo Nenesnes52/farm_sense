@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:farm_sense/pages/disease/classification_result.dart';
 import 'package:flutter/foundation.dart';
+import 'package:farm_sense/widgets/error_dialog.dart'; // Import error_dialog.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:image/image.dart' as img;
@@ -70,7 +71,6 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
     if (!mounted) return;
     setState(() {
       _isProcessing = true;
-// Simpan untuk ditampilkan
     });
 
     try {
@@ -110,8 +110,51 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
       _interpreter.run(input, output);
 
       final predictionResult = (output[0] as List).cast<double>();
+      if (kDebugMode) {
+        print("HASIL MENTAH MODEL (Probabilitas): $predictionResult");
+      }
 
-      // Mendapatkan semua label
+      // --- LOGIKA PEMERIKSAAN AMBANG BATAS ---
+
+      // 1. Tentukan ambang batas kepercayaan (misalnya 75%).
+      // Anda dapat menyesuaikan nilai ini antara 0.0 sampai 1.0.
+      const double confidenceThreshold = 0.75;
+
+      // 2. Dapatkan nilai kepercayaan (probabilitas) tertinggi dari hasil prediksi.
+      final double maxConfidence =
+          predictionResult.reduce((curr, next) => curr > next ? curr : next);
+
+      // 3. Cek apakah nilai kepercayaan tertinggi di bawah ambang batas.
+      if (maxConfidence < confidenceThreshold) {
+        // Jika kepercayaan terlalu rendah, tampilkan dialog peringatan.
+        if (!mounted) return;
+        setState(() {
+          _isProcessing = false; // Hentikan indikator loading
+        });
+
+        // Tampilkan dialog
+        await showErrorDialog(
+          context: context,
+          message: "Gambar Tidak Dikenali",
+          description: "Sistem belum bisa mengenali objek pada gambar.",
+          solution:
+              "Pastikan feses ayam terlihat jelas, tidak buram, dan berada di tengah kamera.",
+          // Anda bisa menambahkan parameter 'solution' jika ada saran solusi spesifik
+          isWarning:
+              true, // Jika ingin style warning (jika error_dialog mendukungnya)
+        );
+
+        // Hapus file sementara jika tidak jadi diproses
+        if (await imageFile.exists()) {
+          await imageFile.delete();
+        }
+
+        return; // Hentikan eksekusi fungsi lebih lanjut
+      }
+
+      // --- AKHIR DARI LOGIKA PEMERIKSAAN ---
+
+      // Jika lolos pengecekan, lanjutkan proses seperti biasa.
       final allLabels = _getLabels();
 
       double coccidiosisPercentage = 0.0;
@@ -140,7 +183,6 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
         }
       }
 
-      // Mengurutkan untuk menentukan prediksi utama (opsional jika hanya butuh variabel terpisah)
       resultsForSorting.sort(
           (a, b) => (b['value'] as double).compareTo(a['value'] as double));
       if (resultsForSorting.isNotEmpty) {
@@ -154,13 +196,12 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
         Navigator.of(context).push(MaterialPageRoute(
           builder: (context) {
             return ClassificationResult(
-              // Teruskan variabel-variabel individual
               coccidiosis: coccidiosisPercentage,
               sehat: sehatPercentage,
               newcastle: newcastlePercentage,
               salmonella: salmonellaPercentage,
-              topLabel: topPredictionLabel, // Label prediksi tertinggi
-              topValue: topPredictionValue, // Persentase prediksi tertinggi
+              topLabel: topPredictionLabel,
+              topValue: topPredictionValue,
               processedImageFile: imageFile,
             );
           },
