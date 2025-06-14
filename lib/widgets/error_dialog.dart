@@ -29,7 +29,9 @@ Future<void> showErrorDialog({
                     foreground: Paint()
                       ..style = PaintingStyle.stroke
                       ..strokeWidth = 1.2
-                      ..color = Color.fromRGBO(245, 53, 48, 1),
+                      ..color = isWarning
+                          ? Colors.yellow
+                          : Color.fromRGBO(245, 53, 48, 1),
                   ),
                 ),
                 Text(
@@ -38,7 +40,9 @@ Future<void> showErrorDialog({
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
-                    color: Color.fromRGBO(245, 53, 48, 1),
+                    color: isWarning
+                        ? Colors.yellow
+                        : Color.fromRGBO(245, 53, 48, 1),
                   ),
                 ),
               ],

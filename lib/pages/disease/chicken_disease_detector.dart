@@ -135,10 +135,10 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
         // Tampilkan dialog
         await showErrorDialog(
           context: context,
-          message: "Gambar Tidak Dikenali",
-          description: "Sistem belum bisa mengenali objek pada gambar.",
+          message: "Tidak ada feses terdeteksi",
+          description: "Sistem tidak mendeteksi adanya feses pada gambar.",
           solution:
-              "Pastikan feses ayam terlihat jelas, tidak buram, dan berada di tengah kamera.",
+              "\nPastikan feses ayam terlihat jelas, tidak buram, dan berada di tengah kamera.",
           // Anda bisa menambahkan parameter 'solution' jika ada saran solusi spesifik
           isWarning:
               true, // Jika ingin style warning (jika error_dialog mendukungnya)

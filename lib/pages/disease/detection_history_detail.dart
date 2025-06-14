@@ -297,8 +297,7 @@ class DetectionHistoryDetail extends StatelessWidget {
                             bottomLeft: Radius.circular(10),
                             bottomRight: Radius.circular(10))),
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                          16, 16, 16, 24), // Beri padding bawah lebih
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
