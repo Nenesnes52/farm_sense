@@ -46,7 +46,7 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
   Future<void> _loadModel() async {
     try {
       _interpreter = await Interpreter.fromAsset(
-        'assets/models/chicken_disease.tflite', // Pastikan path ini benar
+        'assets/models/chicken_disease_v2.tflite', // Pastikan path ini benar
         options: InterpreterOptions()..threads = 4,
       );
       if (kDebugMode) {
