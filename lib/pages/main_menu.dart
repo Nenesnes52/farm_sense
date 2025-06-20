@@ -11,8 +11,8 @@ import 'package:image/image.dart' as img;
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
-
 import 'package:farm_sense/pages/disease/classification_result.dart';
+import 'package:farm_sense/widgets/error_dialog.dart';
 
 class MainMenu extends StatefulWidget {
   const MainMenu({
@@ -50,7 +50,7 @@ class MainMenuState extends State<MainMenu> {
   Future<void> _loadModel() async {
     try {
       _interpreter = await Interpreter.fromAsset(
-        'assets/models/chicken_disease.tflite',
+        'assets/models/chicken_disease_v6_new_default_no_opt.tflite',
         options: InterpreterOptions()..threads = 4,
       );
       if (kDebugMode) {
@@ -176,30 +176,90 @@ class MainMenuState extends State<MainMenu> {
       final img.Image resizedImage =
           img.copyResize(originalImage, width: _inputSize, height: _inputSize);
 
-      final input = List.generate(
-          1,
-          (_) => List.generate(
-                _inputSize,
-                (y) => List.generate(
-                  _inputSize,
-                  (x) {
-                    final pixel = resizedImage.getPixel(x, y);
-                    return [
-                      pixel.r / 255.0, // Akses komponen merah
-                      pixel.g / 255.0, // Akses komponen hijau
-                      pixel.b / 255.0 // Akses komponen biru
-                    ];
-                  },
-                ),
-              ));
+      // --- PERUBAHAN UTAMA DI SINI: Normalisasi input ---
+      // Model EfficientNet yang dilatih dengan bobot ImageNet dan menggunakan
+      // `preprocess_input` biasanya mengharapkan input dalam rentang [-1, 1].
+      // `preprocess_input` melakukan (pixel / 127.5) - 1.0
+
+      // Di dalam _processImage dan _pickImageFromGallery
+      var inputBuffer = Float32List(1 * _inputSize * _inputSize * 3);
+      int bufferIndex = 0;
+
+      // Sebelum loop normalisasi
+      var testPixelBefore = resizedImage.getPixel(0, 0);
+      if (kDebugMode) {
+        print(
+            "Flutter - Pixel (0,0) SEBELUM normalisasi: R=${testPixelBefore.r}, G=${testPixelBefore.g}, B=${testPixelBefore.b}");
+      }
+
+      for (int y = 0; y < _inputSize; y++) {
+        for (int x = 0; x < _inputSize; x++) {
+          var pixel = resizedImage.getPixel(x, y);
+          // Normalisasi ke rentang [-1, 1]
+          // inputBuffer[bufferIndex++] = (pixel.r / 127.5) - 1.0;
+          // inputBuffer[bufferIndex++] = (pixel.g / 127.5) - 1.0;
+          // inputBuffer[bufferIndex++] = (pixel.b / 127.5) - 1.0;
+          inputBuffer[bufferIndex++] =
+              pixel.r.toDouble(); // Gunakan nilai piksel asli
+          inputBuffer[bufferIndex++] =
+              pixel.g.toDouble(); // Gunakan nilai piksel asli
+          inputBuffer[bufferIndex++] =
+              pixel.b.toDouble(); // Gunakan nilai piksel asli
+        }
+      }
+      // Setelah mengisi inputBuffer
+      if (kDebugMode) {
+        print(
+            "Flutter - InputBuffer (awal): ${inputBuffer.sublist(0, 9)}"); // Cetak 3 piksel pertama (RGBRGBRGB)
+      }
+
+      // Reshape buffer menjadi bentuk yang diharapkan model [1, height, width, channels]
+      final input = inputBuffer.reshape([1, _inputSize, _inputSize, 3]);
 
       // Prediksi
       // Pastikan output shape sesuai dengan model Anda (misal 1x4 untuk 4 kelas)
-      final output = List.filled(1 * 4, 0.0).reshape([1, 4]);
-      _interpreter!
-          .run(input, output); // Gunakan _interpreter! karena sudah dicek null
+      final output = List.filled(1 * _getLabels().length, 0.0)
+          .reshape([1, _getLabels().length]);
+      _interpreter!.run(input, output);
 
       final predictionResult = (output[0] as List).cast<double>();
+      if (kDebugMode) {
+        print("HASIL MENTAH MODEL (Probabilitas): $predictionResult");
+      }
+
+      // --- LOGIKA PEMERIKSAAN AMBANG BATAS ---
+      // 1. Tentukan ambang batas kepercayaan (misalnya 55%).
+      // Anda dapat menyesuaikan nilai ini antara 0.0 sampai 1.0.
+      const double confidenceThreshold = 0.75;
+
+      // 2. Dapatkan nilai kepercayaan (probabilitas) tertinggi dari hasil prediksi.
+      final double maxConfidence =
+          predictionResult.reduce((curr, next) => curr > next ? curr : next);
+
+      // 3. Cek apakah nilai kepercayaan tertinggi di bawah ambang batas.
+      if (maxConfidence < confidenceThreshold) {
+        // Jika kepercayaan terlalu rendah, tampilkan dialog peringatan.
+        if (mounted) {
+          setState(() {
+            _isProcessing = false; // Hentikan indikator loading
+          });
+
+          // Tampilkan dialog
+          await showErrorDialog(
+            context: context,
+            message: "Tidak ada feses terdeteksi",
+            description: "Sistem tidak mendeteksi adanya feses pada gambar.",
+            solution:
+                "\nPastikan feses ayam terlihat jelas, tidak buram, dan berada di tengah gambar.",
+          );
+        }
+        // Hapus file sementara jika tidak jadi diproses
+        if (await imageFile.exists()) {
+          await imageFile.delete();
+        }
+        return; // Hentikan eksekusi fungsi lebih lanjut
+      }
+      // --- AKHIR DARI LOGIKA PEMERIKSAAN ---
       final allLabels = _getLabels();
 
       // Ekstrak hasil ke variabel individual seperti di chicken_disease_detector.dart
@@ -476,6 +536,7 @@ class MainMenuState extends State<MainMenu> {
 
   @override
   Widget build(BuildContext context) {
+    // ignore: deprecated_member_use
     return WillPopScope(
       onWillPop: _onWillPop,
       child: Container(

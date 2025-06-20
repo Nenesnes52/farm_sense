@@ -4,12 +4,12 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:farm_sense/pages/disease/classification_result.dart';
 import 'package:flutter/foundation.dart';
-import 'package:farm_sense/widgets/error_dialog.dart'; // Import error_dialog.dart
+import 'package:farm_sense/widgets/error_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:image/image.dart' as img;
 import 'package:tflite_flutter/tflite_flutter.dart';
-import 'package:google_fonts/google_fonts.dart'; // Ditambahkan untuk styling
+import 'package:google_fonts/google_fonts.dart';
 
 class ChickenDiseaseDetector extends StatefulWidget {
   final CameraDescription camera;
@@ -46,7 +46,7 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
   Future<void> _loadModel() async {
     try {
       _interpreter = await Interpreter.fromAsset(
-        'assets/models/chicken_disease_v2.tflite', // Pastikan path ini benar
+        'assets/models/chicken_disease_v6_new_default_no_opt.tflite',
         options: InterpreterOptions()..threads = 4,
       );
       if (kDebugMode) {
@@ -56,6 +56,8 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
       if (kDebugMode) {
         print("Gagal memuat model: $e");
       }
+      // Pertimbangkan untuk menampilkan pesan error ke pengguna jika model gagal dimuat
+      // showErrorDialog(context: context, message: "Gagal memuat model AI", description: e.toString());
       setState(() {});
     }
   }
@@ -75,8 +77,12 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
 
     try {
       // Decode & resize ke _inputSize x _inputSize
-      final originalImage = img.decodeImage(await imageFile.readAsBytes());
+      final imageBytes = await imageFile.readAsBytes();
+      final originalImage = img.decodeImage(imageBytes);
       if (originalImage == null) {
+        if (kDebugMode) {
+          print("Gagal decode gambar.");
+        }
         setState(() {
           _isProcessing = false;
         });
@@ -85,28 +91,37 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
       final resizedImage =
           img.copyResize(originalImage, width: _inputSize, height: _inputSize);
 
-      // Normalisasi input
-      final input = List.generate(
-          1,
-          (_) => List.generate(
-                _inputSize,
-                (y) => List.generate(
-                  _inputSize,
-                  (x) {
-                    final pixel =
-                        resizedImage.getPixel(x, y); // Mengambil objek Pixel
-                    return [
-                      pixel.r / 255.0, // Mengakses komponen merah
-                      pixel.g / 255.0, // Mengakses komponen hijau
-                      pixel.b / 255.0 // Mengakses komponen biru
-                    ];
-                  },
-                ),
-              ));
+      // --- PERUBAHAN UTAMA DI SINI: Normalisasi input ---
+      // Model EfficientNet yang dilatih dengan bobot ImageNet dan menggunakan
+      // `preprocess_input` biasanya mengharapkan input dalam rentang [-1, 1].
+      // `preprocess_input` melakukan (pixel / 127.5) - 1.0
+      // Kita juga perlu memastikan urutan channel RGB dan struktur data input sesuai.
+      // TFLite Interpreter biasanya mengharapkan Float32List.
+
+      var inputBuffer = Float32List(1 * _inputSize * _inputSize * 3);
+      int bufferIndex = 0;
+      for (int y = 0; y < _inputSize; y++) {
+        for (int x = 0; x < _inputSize; x++) {
+          var pixel = resizedImage.getPixel(x, y);
+          // Normalisasi ke rentang [-1, 1]
+          // inputBuffer[bufferIndex++] = (pixel.r / 127.5) - 1.0;
+          // inputBuffer[bufferIndex++] = (pixel.g / 127.5) - 1.0;
+          // inputBuffer[bufferIndex++] = (pixel.b / 127.5) - 1.0;
+          inputBuffer[bufferIndex++] =
+              pixel.r.toDouble(); // Gunakan nilai piksel asli
+          inputBuffer[bufferIndex++] =
+              pixel.g.toDouble(); // Gunakan nilai piksel asli
+          inputBuffer[bufferIndex++] =
+              pixel.b.toDouble(); // Gunakan nilai piksel asli
+        }
+      }
+      // Reshape buffer menjadi bentuk yang diharapkan model [1, height, width, channels]
+      final input = inputBuffer.reshape([1, _inputSize, _inputSize, 3]);
 
       // Prediksi
-      final output = List.filled(1 * 4, 0.0)
-          .reshape([1, 4]); // Sesuaikan dengan jumlah kelas output model Anda
+      final output = List.filled(
+              1 * _getLabels().length, 0.0) // Gunakan _getLabels().length
+          .reshape([1, _getLabels().length]); // Gunakan _getLabels().length
       _interpreter.run(input, output);
 
       final predictionResult = (output[0] as List).cast<double>();
@@ -115,48 +130,31 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
       }
 
       // --- LOGIKA PEMERIKSAAN AMBANG BATAS ---
-
-      // 1. Tentukan ambang batas kepercayaan (misalnya 75%).
-      // Anda dapat menyesuaikan nilai ini antara 0.0 sampai 1.0.
       const double confidenceThreshold = 0.75;
-
-      // 2. Dapatkan nilai kepercayaan (probabilitas) tertinggi dari hasil prediksi.
       final double maxConfidence =
           predictionResult.reduce((curr, next) => curr > next ? curr : next);
 
-      // 3. Cek apakah nilai kepercayaan tertinggi di bawah ambang batas.
       if (maxConfidence < confidenceThreshold) {
-        // Jika kepercayaan terlalu rendah, tampilkan dialog peringatan.
         if (!mounted) return;
         setState(() {
-          _isProcessing = false; // Hentikan indikator loading
+          _isProcessing = false;
         });
-
-        // Tampilkan dialog
         await showErrorDialog(
           context: context,
           message: "Tidak ada feses terdeteksi",
           description: "Sistem tidak mendeteksi adanya feses pada gambar.",
           solution:
               "\nPastikan feses ayam terlihat jelas, tidak buram, dan berada di tengah kamera.",
-          // Anda bisa menambahkan parameter 'solution' jika ada saran solusi spesifik
-          isWarning:
-              true, // Jika ingin style warning (jika error_dialog mendukungnya)
         );
-
-        // Hapus file sementara jika tidak jadi diproses
         if (await imageFile.exists()) {
           await imageFile.delete();
         }
-
-        return; // Hentikan eksekusi fungsi lebih lanjut
+        return;
       }
 
       // --- AKHIR DARI LOGIKA PEMERIKSAAN ---
 
-      // Jika lolos pengecekan, lanjutkan proses seperti biasa.
       final allLabels = _getLabels();
-
       double coccidiosisPercentage = 0.0;
       double sehatPercentage = 0.0;
       double newcastlePercentage = 0.0;
@@ -169,7 +167,6 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
       for (int i = 0; i < predictionResult.length; i++) {
         String label = allLabels[i];
         double percentage = predictionResult[i] * 100;
-
         resultsForSorting.add({'label': label, 'value': percentage});
 
         if (label == "Coccidiosis") {
@@ -215,11 +212,18 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
       setState(() {
         _isProcessing = false;
       });
+      // Pertimbangkan untuk menampilkan dialog error kepada pengguna di sini juga
+      // await showErrorDialog(
+      //   context: context,
+      //   message: "Terjadi Kesalahan",
+      //   description: "Gagal memproses gambar. Silakan coba lagi.",
+      // );
     }
   }
 
   List<String> _getLabels() {
     // Helper untuk mendapatkan semua label
+    // Pastikan urutan ini SAMA PERSIS dengan urutan output model Anda
     return [
       "Coccidiosis",
       "Sehat",
@@ -234,15 +238,10 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
     try {
       setState(() {
         _isProcessing = true;
-// Kosongkan hasil sebelumnya
-// Kosongkan gambar preview hasil sebelumnya
       });
 
-      // Pastikan controller sudah terinisialisasi
       await _initControllerFuture;
-
       final image = await _controller.takePicture();
-
       final originalBytes = await File(image.path).readAsBytes();
       final originalImage = img.decodeImage(originalBytes);
 
@@ -250,7 +249,6 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
         throw Exception("Gagal decode gambar");
       }
 
-      // Crop menjadi persegi (square) dari tengah
       final width = originalImage.width;
       final height = originalImage.height;
       final size = width < height ? width : height;
@@ -265,7 +263,6 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
         height: size,
       );
 
-      // Simpan gambar yang sudah dicrop sementara
       final tempDir = Directory.systemTemp;
       final croppedFile = File(
           '${tempDir.path}/${DateTime.now().millisecondsSinceEpoch}_cropped.jpg')
@@ -273,7 +270,6 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
 
       if (!mounted) return;
 
-      // Tampilkan dialog konfirmasi
       final confirmProcess = await showDialog<bool>(
         context: context,
         barrierDismissible: false,
@@ -333,12 +329,9 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
       if (confirmProcess == true) {
         await _processImage(croppedFile);
       } else {
-        // Jika pengguna memilih "Ambil Ulang" atau menutup dialog
         setState(() {
           _isProcessing = false;
-          // _result = 'Pengambilan gambar dibatalkan.';
         });
-        // Hapus file crop sementara jika tidak jadi diproses
         if (await croppedFile.exists()) {
           await croppedFile.delete();
         }
@@ -351,6 +344,12 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
       setState(() {
         _isProcessing = false;
       });
+      // Pertimbangkan untuk menampilkan dialog error kepada pengguna di sini juga
+      // await showErrorDialog(
+      //   context: context,
+      //   message: "Terjadi Kesalahan",
+      //   description: "Gagal mengambil atau memproses gambar. Silakan coba lagi.",
+      // );
     }
   }
 
@@ -364,7 +363,7 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
             Navigator.of(context).pop();
           },
           icon: SvgPicture.asset(
-            'assets/images/back-icon.svg',
+            'assets/images/back-icon.svg', // Pastikan path ini benar
             fit: BoxFit.none,
           ),
         ),
@@ -407,7 +406,6 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
                 future: _initControllerFuture,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.done) {
-                    // Jika Future selesai, tampilkan preview.
                     return Card(
                       elevation: 4,
                       shape: RoundedRectangleBorder(
@@ -416,12 +414,11 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
                       child: AspectRatio(
                         aspectRatio: _controller.value.aspectRatio > 0
                             ? 1 / _controller.value.aspectRatio
-                            : 1.0, // Sesuaikan aspect ratio
+                            : 1.0,
                         child: CameraPreview(_controller),
                       ),
                     );
                   } else {
-                    // Jika tidak, tampilkan loading indicator.
                     return const Center(
                         heightFactor: 5, child: CircularProgressIndicator());
                   }
