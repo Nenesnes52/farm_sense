@@ -2,13 +2,13 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:camera/camera.dart';
+import 'package:farm_sense/helpers/classifier.dart';
 import 'package:farm_sense/pages/disease/classification_result.dart';
 import 'package:flutter/foundation.dart';
 import 'package:farm_sense/widgets/error_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:image/image.dart' as img;
-import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class ChickenDiseaseDetector extends StatefulWidget {
@@ -24,9 +24,9 @@ class ChickenDiseaseDetector extends StatefulWidget {
 }
 
 class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
-  late Interpreter _interpreter;
+  // HANYA PERLU SATU INSTANCE CLASSIFIER
+  final Classifier _classifier = Classifier();
   bool _isProcessing = false;
-  final int _inputSize = 224;
 
   late CameraController _controller;
   late Future<void> _initControllerFuture;
@@ -40,34 +40,19 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
       enableAudio: false,
     );
     _initControllerFuture = _controller.initialize();
-    _loadModel();
-  }
-
-  Future<void> _loadModel() async {
-    try {
-      _interpreter = await Interpreter.fromAsset(
-        'assets/models/chicken_disease_v6_new_default_no_opt.tflite',
-        options: InterpreterOptions()..threads = 4,
-      );
-      if (kDebugMode) {
-        print("Model berhasil dimuat.");
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print("Gagal memuat model: $e");
-      }
-      // Pertimbangkan untuk menampilkan pesan error ke pengguna jika model gagal dimuat
-      // showErrorDialog(context: context, message: "Gagal memuat model AI", description: e.toString());
-      setState(() {});
-    }
+    // Muat model melalui classifier
+    _classifier.loadModel();
   }
 
   @override
   void dispose() {
     _controller.dispose();
-    _interpreter.close();
+    _classifier.dispose();
     super.dispose();
   }
+
+// Di dalam file: lib/pages/disease/chicken_disease_detector.dart
+// Ganti method _processImage dengan ini
 
   Future<void> _processImage(File imageFile) async {
     if (!mounted) return;
@@ -76,160 +61,86 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
     });
 
     try {
-      // Decode & resize ke _inputSize x _inputSize
-      final imageBytes = await imageFile.readAsBytes();
-      final originalImage = img.decodeImage(imageBytes);
-      if (originalImage == null) {
-        if (kDebugMode) {
-          print("Gagal decode gambar.");
+      final PredictionResult? result =
+          await _classifier.processImage(imageFile);
+
+      if (result == null) {
+        throw Exception("Gagal memproses gambar dengan classifier.");
+      }
+
+      // --- LOGIKA AMBANG BATAS GANDA (DUAL THRESHOLD) BARU ---
+      const double validityThreshold =
+          0.50; // Ambang batas minimal 50% untuk dianggap valid
+      const double diseaseAlertThreshold =
+          0.70; // Ambang batas 70% untuk peringatan penyakit
+
+      // 1. Cek validitas gambar secara umum
+      if (result.topConfidence < validityThreshold) {
+        if (mounted) {
+          await showErrorDialog(
+            context: context,
+            message: "Gambar Tidak Dapat Diproses",
+            description:
+                "Sistem tidak dapat mengenali objek dengan keyakinan yang cukup.",
+            solution:
+                "\nPastikan feses ayam terlihat jelas, tidak buram, dan berada di tengah kamera.",
+          );
         }
-        setState(() {
-          _isProcessing = false;
-        });
-        return;
+        return; // Hentikan eksekusi
       }
-      final resizedImage =
-          img.copyResize(originalImage, width: _inputSize, height: _inputSize);
 
-      // --- PERUBAHAN UTAMA DI SINI: Normalisasi input ---
-      // Model EfficientNet yang dilatih dengan bobot ImageNet dan menggunakan
-      // `preprocess_input` biasanya mengharapkan input dalam rentang [-1, 1].
-      // `preprocess_input` melakukan (pixel / 127.5) - 1.0
-      // Kita juga perlu memastikan urutan channel RGB dan struktur data input sesuai.
-      // TFLite Interpreter biasanya mengharapkan Float32List.
-
-      var inputBuffer = Float32List(1 * _inputSize * _inputSize * 3);
-      int bufferIndex = 0;
-      for (int y = 0; y < _inputSize; y++) {
-        for (int x = 0; x < _inputSize; x++) {
-          var pixel = resizedImage.getPixel(x, y);
-          // Normalisasi ke rentang [-1, 1]
-          // inputBuffer[bufferIndex++] = (pixel.r / 127.5) - 1.0;
-          // inputBuffer[bufferIndex++] = (pixel.g / 127.5) - 1.0;
-          // inputBuffer[bufferIndex++] = (pixel.b / 127.5) - 1.0;
-          inputBuffer[bufferIndex++] =
-              pixel.r.toDouble(); // Gunakan nilai piksel asli
-          inputBuffer[bufferIndex++] =
-              pixel.g.toDouble(); // Gunakan nilai piksel asli
-          inputBuffer[bufferIndex++] =
-              pixel.b.toDouble(); // Gunakan nilai piksel asli
+      // 2. Cek jika prediksi adalah penyakit dengan keyakinan sedang
+      if (result.topLabel != 'Sehat' &&
+          result.topConfidence < diseaseAlertThreshold) {
+        if (mounted) {
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (context) {
+              return ClassificationResult(
+                coccidiosis: result.allScores['Coccidiosis']! * 100,
+                sehat: result.allScores['Sehat']! * 100,
+                newcastle: result.allScores['Newcastle Disease']! * 100,
+                salmonella: result.allScores['Salmonella']! * 100,
+                topLabel: result.topLabel,
+                topValue: result.topConfidence * 100,
+                processedImageFile: imageFile,
+                // Tambahkan catatan khusus untuk keyakinan rendah
+                customNote:
+                    "PERINGATAN: Gejala terdeteksi dengan tingkat keyakinan sedang. Disarankan untuk melakukan observasi lebih lanjut atau melakukan tes ulang dengan gambar yang lebih jelas.",
+              );
+            },
+          ));
         }
-      }
-      // Reshape buffer menjadi bentuk yang diharapkan model [1, height, width, channels]
-      final input = inputBuffer.reshape([1, _inputSize, _inputSize, 3]);
-
-      // Prediksi
-      final output = List.filled(
-              1 * _getLabels().length, 0.0) // Gunakan _getLabels().length
-          .reshape([1, _getLabels().length]); // Gunakan _getLabels().length
-      _interpreter.run(input, output);
-
-      final predictionResult = (output[0] as List).cast<double>();
-      if (kDebugMode) {
-        print("HASIL MENTAH MODEL (Probabilitas): $predictionResult");
+        return; // Hentikan eksekusi agar tidak lanjut ke navigasi di bawah
       }
 
-      // --- LOGIKA PEMERIKSAAN AMBANG BATAS ---
-      const double confidenceThreshold = 0.75;
-      final double maxConfidence =
-          predictionResult.reduce((curr, next) => curr > next ? curr : next);
-
-      if (maxConfidence < confidenceThreshold) {
-        if (!mounted) return;
-        setState(() {
-          _isProcessing = false;
-        });
-        await showErrorDialog(
-          context: context,
-          message: "Tidak ada feses terdeteksi",
-          description: "Sistem tidak mendeteksi adanya feses pada gambar.",
-          solution:
-              "\nPastikan feses ayam terlihat jelas, tidak buram, dan berada di tengah kamera.",
-        );
-        if (await imageFile.exists()) {
-          await imageFile.delete();
-        }
-        return;
-      }
-
-      // --- AKHIR DARI LOGIKA PEMERIKSAAN ---
-
-      final allLabels = _getLabels();
-      double coccidiosisPercentage = 0.0;
-      double sehatPercentage = 0.0;
-      double newcastlePercentage = 0.0;
-      double salmonellaPercentage = 0.0;
-      String topPredictionLabel = '';
-      double topPredictionValue = 0.0;
-
-      List<Map<String, dynamic>> resultsForSorting = [];
-
-      for (int i = 0; i < predictionResult.length; i++) {
-        String label = allLabels[i];
-        double percentage = predictionResult[i] * 100;
-        resultsForSorting.add({'label': label, 'value': percentage});
-
-        if (label == "Coccidiosis") {
-          coccidiosisPercentage = percentage;
-        } else if (label == "Sehat") {
-          sehatPercentage = percentage;
-        } else if (label == "Newcastle Disease") {
-          newcastlePercentage = percentage;
-        } else if (label == "Salmonella") {
-          salmonellaPercentage = percentage;
-        }
-      }
-
-      resultsForSorting.sort(
-          (a, b) => (b['value'] as double).compareTo(a['value'] as double));
-      if (resultsForSorting.isNotEmpty) {
-        topPredictionLabel = resultsForSorting[0]['label'] as String;
-        topPredictionValue = resultsForSorting[0]['value'] as double;
-      }
-
-      if (!mounted) return;
-      setState(() {
-        _isProcessing = false;
+      // 3. Jika lolos semua, navigasi seperti biasa (untuk prediksi 'Sehat' atau penyakit > 70%)
+      if (mounted) {
         Navigator.of(context).push(MaterialPageRoute(
           builder: (context) {
             return ClassificationResult(
-              coccidiosis: coccidiosisPercentage,
-              sehat: sehatPercentage,
-              newcastle: newcastlePercentage,
-              salmonella: salmonellaPercentage,
-              topLabel: topPredictionLabel,
-              topValue: topPredictionValue,
+              coccidiosis: result.allScores['Coccidiosis']! * 100,
+              sehat: result.allScores['Sehat']! * 100,
+              newcastle: result.allScores['Newcastle Disease']! * 100,
+              salmonella: result.allScores['Salmonella']! * 100,
+              topLabel: result.topLabel,
+              topValue: result.topConfidence * 100,
               processedImageFile: imageFile,
             );
           },
         ));
-      });
-    } catch (e) {
-      if (kDebugMode) {
-        print("Error processing image: $e");
       }
-      if (!mounted) return;
-      setState(() {
-        _isProcessing = false;
-      });
-      // Pertimbangkan untuk menampilkan dialog error kepada pengguna di sini juga
-      // await showErrorDialog(
-      //   context: context,
-      //   message: "Terjadi Kesalahan",
-      //   description: "Gagal memproses gambar. Silakan coba lagi.",
-      // );
+    } catch (e) {
+      if (kDebugMode) print("Error processing image: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  "Terjadi kesalahan saat memproses gambar: ${e.toString()}")),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
     }
-  }
-
-  List<String> _getLabels() {
-    // Helper untuk mendapatkan semua label
-    // Pastikan urutan ini SAMA PERSIS dengan urutan output model Anda
-    return [
-      "Coccidiosis",
-      "Sehat",
-      "Newcastle Disease",
-      "Salmonella",
-    ];
   }
 
   Future<void> _captureAndProcessImage() async {

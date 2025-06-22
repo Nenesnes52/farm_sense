@@ -15,6 +15,7 @@ class ClassificationResult extends StatefulWidget {
   final String topLabel;
   final double topValue;
   final File? processedImageFile;
+  final String? customNote; // <-- 1. PARAMETER BARU DITAMBAHKAN
 
   const ClassificationResult({
     required this.coccidiosis,
@@ -24,6 +25,7 @@ class ClassificationResult extends StatefulWidget {
     required this.topLabel,
     required this.topValue,
     required this.processedImageFile,
+    this.customNote, // <-- 2. TAMBAHKAN DI KONSTRUKTOR
     super.key,
   });
 
@@ -32,36 +34,7 @@ class ClassificationResult extends StatefulWidget {
 }
 
 class _ClassificationResultState extends State<ClassificationResult> {
-  // Helper untuk baris persentase
-  // Widget _buildResultRow(String label, double value, BuildContext context) {
-  //   bool isTop = label == widget.topLabel;
-  //   return Padding(
-  //     padding: const EdgeInsets.symmetric(vertical: 5.0),
-  //     child: Row(
-  //       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-  //       children: [
-  //         Text(
-  //           label,
-  //           style: GoogleFonts.plusJakartaSans(
-  //             fontSize: 14,
-  //             fontWeight: isTop ? FontWeight.w600 : FontWeight.normal,
-  //             color: isTop ? const Color(0xFF025464) : Colors.black87,
-  //           ),
-  //         ),
-  //         Text(
-  //           '${value.toStringAsFixed(2)}%',
-  //           style: GoogleFonts.plusJakartaSans(
-  //             fontSize: 14,
-  //             fontWeight: isTop ? FontWeight.w600 : FontWeight.normal,
-  //             color: isTop ? const Color(0xFF025464) : Colors.black87,
-  //           ),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
-
-  // Helper untuk item daftar bernomor
+  // ... (semua helper widget seperti _buildNumberedListItem tidak perlu diubah)
   Widget _buildNumberedListItem(BuildContext context, int number, String text,
       {TextStyle? style, bool isWarning = false}) {
     final defaultStyle = GoogleFonts.plusJakartaSans(
@@ -93,7 +66,6 @@ class _ClassificationResultState extends State<ClassificationResult> {
     );
   }
 
-  // Helper untuk item daftar berpoin (bullet)
   Widget _buildBulletedListItem(BuildContext context, String text,
       {TextStyle? style, int indentLevel = 0, bool isWarning = false}) {
     final defaultStyle = GoogleFonts.plusJakartaSans(
@@ -128,6 +100,7 @@ class _ClassificationResultState extends State<ClassificationResult> {
   }
 
   Widget _buildDiseaseSpecificInfo(BuildContext context, String disease) {
+    // ... (Isi dari fungsi ini tidak perlu diubah)
     List<Widget> recommendations = [];
     List<Widget> treatments = [];
     String recommendationTitle = "Rekomendasi";
@@ -274,6 +247,7 @@ class _ClassificationResultState extends State<ClassificationResult> {
     );
   }
 
+  // ... (fungsi _saveDetectionResult tidak perlu diubah)
   bool _isSaving = false;
 
   Future<void> _saveDetectionResult() async {
@@ -309,11 +283,10 @@ class _ClassificationResultState extends State<ClassificationResult> {
       final String formattedTime = DateFormat('HH:mm:ss', 'id_ID').format(now);
 
       Map<String, dynamic> dataToSave = {
-        // 'userEmail': currentUser.email,
         'userId': currentUser.uid,
         'detectionDate': formattedDate,
         'detectionTime': formattedTime,
-        'timestamp': FieldValue.serverTimestamp(), // Untuk pengurutan di server
+        'timestamp': FieldValue.serverTimestamp(),
         'topLabel': widget.topLabel,
         'topValue': widget.topValue,
         'percentages': {
@@ -322,8 +295,6 @@ class _ClassificationResultState extends State<ClassificationResult> {
           'Newcastle Disease': widget.newcastle,
           'Salmonella': widget.salmonella,
         },
-        // Anda bisa menambahkan URL gambar jika menyimpannya ke Firebase Storage
-        // 'imageUrl': 'URL_GAMBAR_JIKA_ADA'
       };
 
       await FirebaseFirestore.instance
@@ -364,6 +335,7 @@ class _ClassificationResultState extends State<ClassificationResult> {
 
     return Scaffold(
       appBar: AppBar(
+        // ... (AppBar tidak berubah)
         toolbarHeight: 65,
         flexibleSpace: Container(
           decoration: BoxDecoration(
@@ -421,6 +393,39 @@ class _ClassificationResultState extends State<ClassificationResult> {
                         ),
                       ),
                     ),
+
+                  // <-- 3. WIDGET BARU UNTUK MENAMPILKAN CATATAN KHUSUS -->
+                  if (widget.customNote != null &&
+                      widget.customNote!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16.0),
+                      child: Container(
+                        padding: const EdgeInsets.all(12.0),
+                        decoration: BoxDecoration(
+                            color: Colors.orange.shade100,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.orange.shade300)),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(Icons.warning_amber_rounded,
+                                color: Colors.orange.shade800, size: 20),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                widget.customNote!,
+                                style: GoogleFonts.plusJakartaSans(
+                                  color: Colors.orange.shade900,
+                                  fontSize: 13,
+                                  height: 1.5,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
                   const SizedBox(height: 16),
                   Card(
                     elevation: 1,
@@ -443,7 +448,6 @@ class _ClassificationResultState extends State<ClassificationResult> {
                                   fontWeight: FontWeight.w900,
                                 ),
                               ),
-                              // const SizedBox(height: 4),
                               Text(
                                 widget.topLabel,
                                 style: GoogleFonts.plusJakartaSans(
@@ -452,47 +456,13 @@ class _ClassificationResultState extends State<ClassificationResult> {
                                   color: Color.fromRGBO(2, 84, 100, 1),
                                 ),
                               ),
-                              // const SizedBox(height: 2),
-                              // Text(
-                              //   '(${widget.topValue.toStringAsFixed(2)}% terdeteksi)',
-                              //   style: GoogleFonts.plusJakartaSans(
-                              //     fontSize: 15, // Sedikit lebih besar
-                              //     fontWeight: FontWeight.normal,
-                              //     color: Colors.black54,
-                              //   ),
-                              // ),
-                              // const SizedBox(height: 10),
-                              // const Divider(height: 24, thickness: 0.5),
-                              // Text(
-                              //   'Detail Persentase Lainnya:',
-                              //   style: GoogleFonts.plusJakartaSans(
-                              //       fontSize: 14,
-                              //       color: Colors.grey.shade700,
-                              //       fontWeight: FontWeight.w500),
-                              // ),
-                              // const SizedBox(height: 4),
-                              // ...results
-                              //     .where((result) =>
-                              //         result['label'] !=
-                              //         widget
-                              //             .topLabel) // Tampilkan yang bukan topLabel
-                              //     .map((result) => _buildResultRow(
-                              //         result['label'] as String,
-                              //         result['value'] as double,
-                              //         context)),
                             ],
                           ),
                           Spacer(),
                           Column(
                             mainAxisAlignment: MainAxisAlignment.start,
                             crossAxisAlignment: CrossAxisAlignment.end,
-                            // Untuk ikon dan tanggal
                             children: [
-                              // Icon(
-                              //   Icons.calendar_today_outlined,
-                              //   size: 14,
-                              //   color: Colors.grey.shade600,
-                              // ),
                               Text(
                                 'Tanggal deteksi',
                                 style: GoogleFonts.plusJakartaSans(
@@ -501,7 +471,6 @@ class _ClassificationResultState extends State<ClassificationResult> {
                                   color: Color.fromRGBO(108, 145, 153, 1),
                                 ),
                               ),
-                              // const SizedBox(height: 6),
                               Text(
                                 dateNow,
                                 style: GoogleFonts.plusJakartaSans(
@@ -528,19 +497,20 @@ class _ClassificationResultState extends State<ClassificationResult> {
                           _buildDiseaseSpecificInfo(context, widget.topLabel),
                     ),
                   ),
-                  const SizedBox(height: 24), // Tambahan spasi sebelum tombol
+                  const SizedBox(height: 24),
                 ],
               ),
             ),
           ),
           Container(
+            // ... (Tombol tidak berubah)
             padding:
                 const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
             decoration: BoxDecoration(
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withValues(alpha: 0.3),
+                  color: Colors.grey.withOpacity(0.2),
                   spreadRadius: 1,
                   blurRadius: 3,
                   offset: const Offset(0, -1),
@@ -563,16 +533,12 @@ class _ClassificationResultState extends State<ClassificationResult> {
                       ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: Text(
-                      'Kembali ke Beranda',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                    child: Text('Kembali ke Beranda',
+                        style: GoogleFonts.plusJakartaSans(
+                            fontSize: 15, fontWeight: FontWeight.w500)),
                   ),
                 ),
-                const SizedBox(width: 10), // Spasi antar tombol
+                const SizedBox(width: 10),
                 Expanded(
                   child: ElevatedButton(
                     onPressed: _isSaving ? null : _saveDetectionResult,
@@ -593,11 +559,9 @@ class _ClassificationResultState extends State<ClassificationResult> {
                               strokeWidth: 2,
                             ),
                           )
-                        : Text(
-                            'Simpan Hasil',
+                        : Text('Simpan Hasil',
                             style: GoogleFonts.plusJakartaSans(
-                                fontSize: 15, fontWeight: FontWeight.w500),
-                          ),
+                                fontSize: 15, fontWeight: FontWeight.w500)),
                   ),
                 ),
               ],
