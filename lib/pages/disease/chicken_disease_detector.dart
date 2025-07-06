@@ -24,7 +24,6 @@ class ChickenDiseaseDetector extends StatefulWidget {
 }
 
 class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
-  // HANYA PERLU SATU INSTANCE CLASSIFIER
   final Classifier _classifier = Classifier();
   bool _isProcessing = false;
 
@@ -40,7 +39,6 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
       enableAudio: false,
     );
     _initControllerFuture = _controller.initialize();
-    // Muat model melalui classifier
     _classifier.loadModel();
   }
 
@@ -50,9 +48,6 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
     _classifier.dispose();
     super.dispose();
   }
-
-// Di dalam file: lib/pages/disease/chicken_disease_detector.dart
-// Ganti method _processImage dengan ini
 
   Future<void> _processImage(File imageFile) async {
     if (!mounted) return;
@@ -68,13 +63,9 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
         throw Exception("Gagal memproses gambar dengan classifier.");
       }
 
-      // --- LOGIKA AMBANG BATAS GANDA (DUAL THRESHOLD) BARU ---
-      const double validityThreshold =
-          0.50; // Ambang batas minimal 50% untuk dianggap valid
-      const double diseaseAlertThreshold =
-          0.70; // Ambang batas 70% untuk peringatan penyakit
+      const double validityThreshold = 0.50;
+      const double diseaseAlertThreshold = 0.70;
 
-      // 1. Cek validitas gambar secara umum
       if (result.topConfidence < validityThreshold) {
         if (mounted) {
           await showErrorDialog(
@@ -86,10 +77,9 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
                 "\nPastikan feses ayam terlihat jelas, tidak buram, dan berada di tengah kamera.",
           );
         }
-        return; // Hentikan eksekusi
+        return;
       }
 
-      // 2. Cek jika prediksi adalah penyakit dengan keyakinan sedang
       if (result.topLabel != 'Sehat' &&
           result.topConfidence < diseaseAlertThreshold) {
         if (mounted) {
@@ -103,17 +93,15 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
                 topLabel: result.topLabel,
                 topValue: result.topConfidence * 100,
                 processedImageFile: imageFile,
-                // Tambahkan catatan khusus untuk keyakinan rendah
                 customNote:
                     "PERINGATAN: Gejala terdeteksi dengan tingkat keyakinan sedang. Disarankan untuk melakukan observasi lebih lanjut atau melakukan tes ulang dengan gambar yang lebih jelas.",
               );
             },
           ));
         }
-        return; // Hentikan eksekusi agar tidak lanjut ke navigasi di bawah
+        return;
       }
 
-      // 3. Jika lolos semua, navigasi seperti biasa (untuk prediksi 'Sehat' atau penyakit > 70%)
       if (mounted) {
         Navigator.of(context).push(MaterialPageRoute(
           builder: (context) {
@@ -210,14 +198,14 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
                   children: [
                     TextButton(
                       onPressed: () {
-                        Navigator.of(context).pop(false); // Batal
+                        Navigator.of(context).pop(false);
                       },
                       child: Text('Kembali',
                           style: GoogleFonts.poppins(color: Colors.red)),
                     ),
                     ElevatedButton.icon(
                       onPressed: () {
-                        Navigator.of(context).pop(true); // Konfirmasi
+                        Navigator.of(context).pop(true);
                       },
                       icon: const Icon(Icons.check_circle_outline),
                       label:
@@ -255,13 +243,72 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
       setState(() {
         _isProcessing = false;
       });
-      // Pertimbangkan untuk menampilkan dialog error kepada pengguna di sini juga
-      // await showErrorDialog(
-      //   context: context,
-      //   message: "Terjadi Kesalahan",
-      //   description: "Gagal mengambil atau memproses gambar. Silakan coba lagi.",
-      // );
     }
+  }
+
+  // -- FUNGSI BARU UNTUK MENAMPILKAN DIALOG PETUNJUK --
+  Future<void> _showInstructionDialog() async {
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        // Helper widget untuk membuat setiap poin petunjuk
+        Widget buildInstructionPoint(IconData icon, String text) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Icon(icon, size: 22.0, color: Theme.of(context).primaryColor),
+                const SizedBox(width: 12.0),
+                Expanded(
+                  child: Text(
+                    text,
+                    style: GoogleFonts.poppins(fontSize: 14, height: 1.4),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            'Petunjuk Pengambilan Gambar',
+            style:
+                GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 18),
+          ),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                buildInstructionPoint(Icons.social_distance_outlined,
+                    'Gunakan jarak sekitar 30–40 cm dari feses ayam.'),
+                buildInstructionPoint(Icons.straighten_outlined,
+                    'Ambil gambar dari sudut tegak lurus (90°) terhadap permukaan.'),
+                buildInstructionPoint(Icons.cleaning_services_outlined,
+                    'Pastikan latar belakang bersih dan tidak ada objek lain yang mengganggu.'),
+                buildInstructionPoint(Icons.lightbulb_outline,
+                    'Pastikan pencahayaan cukup dan merata.'),
+                buildInstructionPoint(Icons.center_focus_strong_outlined,
+                    'Posisikan area feses agar memenuhi sebagian besar bingkai foto.'),
+                buildInstructionPoint(Icons.replay_outlined,
+                    'Jika hasil foto tampak buram atau gelap, disarankan untuk mengambil ulang gambar.'),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Tutup',
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -274,7 +321,7 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
             Navigator.of(context).pop();
           },
           icon: SvgPicture.asset(
-            'assets/images/back-icon.svg', // Pastikan path ini benar
+            'assets/images/back-icon.svg',
             fit: BoxFit.none,
           ),
         ),
@@ -360,7 +407,20 @@ class _ChickenDiseaseDetectorState extends State<ChickenDiseaseDetector> {
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
+              // -- TOMBOL BARU UNTUK MENAMPILKAN PETUNJUK --
+              TextButton.icon(
+                icon: const Icon(Icons.info_outline, size: 20),
+                label: Text(
+                  'Lihat Petunjuk Pengambilan Gambar',
+                  style: GoogleFonts.poppins(fontSize: 14),
+                ),
+                onPressed: _showInstructionDialog,
+                style: TextButton.styleFrom(
+                  foregroundColor: Theme.of(context).primaryColor,
+                ),
+              ),
+              const SizedBox(height: 10),
             ],
           ),
         ),
